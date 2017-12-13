@@ -9,24 +9,22 @@
 
 //Reads a little-endian 2 byte value from file
 inline uint16_t Read2B(FILE* file) {
-	return
-		fgetc(file) +
-		(fgetc(file) << 8);
+	unsigned char v[2];
+	fread(v, 1, 2, file);
+	return v[0] + (v[1] << 8);
 }
 
 //Reads a little-endian 4 byte value from file
 inline uint32_t Read4B(FILE* file) {
-	return	
-		fgetc(file) +
-		(fgetc(file) << 8) +
-		(fgetc(file) << 16) +
-		(fgetc(file) << 24);
+	unsigned char v[4];
+	fread(v, 1, 4, file);
+	return v[0] + (v[1] << 8) + (v[2] << 16) + (v[3] << 24);
 }
 
 //Loads a BMP file from filepath
 //http://www.dragonwins.com/domains/getteched/bmp/bmpfileformat.htm
 Bitmap LoadBMP(const char* filepath) {
-	Bitmap bmp = { NULL, 0, 0 };
+	Bitmap bmp = { NULL };
 
 	FILE* file;
 	fopen_s(&file, filepath, "rb");
@@ -38,10 +36,6 @@ Bitmap LoadBMP(const char* filepath) {
 		ErrorMessage(error);
 		return bmp;
 	}
-
-	fseek(file, 0, SEEK_END);
-	long filesize = ftell(file);
-	fseek(file, 0, SEEK_SET);
 	
 	//BMP Header
 	if (!(fgetc(file) == 'B' && fgetc(file) == 'M'))
@@ -65,8 +59,15 @@ Bitmap LoadBMP(const char* filepath) {
 	fseek(file, buffer_offset, SEEK_SET);
 	bmp.buffer = (unsigned char*)malloc(buffer_len);
 
-	fread(bmp.buffer, 1, buffer_len, file);
+	size_t bytes_read = fread(bmp.buffer, 1, buffer_len, file);
 	fclose(file);
 
 	return bmp;
+}
+
+void DeleteBMP(Bitmap *bmp) {
+	if (bmp->buffer) {
+		free(bmp->buffer);
+		bmp->buffer = NULL;
+	}
 }

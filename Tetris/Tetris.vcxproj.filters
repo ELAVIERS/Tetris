@@ -33,6 +33,15 @@
     <ClCompile Include="Resource.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Texture.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Timing.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Text.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h">
@@ -47,6 +56,18 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tetris.rc">
@@ -58,6 +79,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shader.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Text.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

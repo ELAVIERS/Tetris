@@ -14,4 +14,5 @@ typedef struct {
 	uint16_t bitcount;
 } Bitmap;
 
-Bitmap LoadBMP(const char* filepath);
+Bitmap LoadBMP(const char *filepath);
+void DeleteBMP(Bitmap*);

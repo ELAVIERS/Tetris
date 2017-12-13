@@ -1,8 +1,10 @@
 #include "Bitmap.h"
 #include "Error.h"
-#include "IO.h"
 #include "Resource.h"
 #include "Shader.h"
+#include "Text.h"
+#include "Texture.h"
+#include "Timing.h"
 #include <GL/glew.h>
 #include <stdbool.h>
 #include <Windows.h>
@@ -45,6 +47,9 @@ void Test_Render();
 
 HDC g_devicecontext;
 GLuint g_shader;
+GLuint g_textshader;
+float g_deltaseconds;
+float g_runtime;
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_show) {
 	//
@@ -103,21 +108,28 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 
 	glewInit();
 	glClearColor(0.f, .2f, 0.f, 1.f);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//
 	//Other
 	//
 	//Obtain shader source strings from resource
-	char *frag_src = LoadStringResource(instance, SHADER_FRAG);
-	char *vert_src = LoadStringResource(instance, SHADER_VERT);
+	char *frag_src =		LoadStringResource(instance, SHADER_FRAG);
+	char *vert_src =		LoadStringResource(instance, SHADER_VERT);
+	char *text_frag_src = LoadStringResource(instance, SHADER_TEXTFRAG);
 
-	if (frag_src == NULL || vert_src == NULL) {
+	if (frag_src == NULL || vert_src == NULL || text_frag_src == NULL) {
 		ErrorMessage("Would you care to explain as to why the shaders don't exist mate?");
 		return 0;
 	}
 
 	g_shader = CreateShaderProgram(frag_src, vert_src);
+	g_textshader = CreateShaderProgram(text_frag_src, vert_src);
+
+	InitTimer();
 
 	Test_Init();
+
 
 	//
 	//Start Game
@@ -132,7 +144,11 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 			DispatchMessage(&msg);
 		}
 
+		StartTimer();
+		g_runtime += g_deltaseconds;
+
 		Render();
+		g_deltaseconds = GetDeltaTime();
 	}
 
 	return 0;
@@ -149,59 +165,21 @@ void Render() {
 //
 //TEMPORARY THINGS
 //
-typedef struct {
-	float position[2];
-	float uv[2];
-} Test_Vertex;
-
-GLuint test_vao;
-GLuint test_vbo;
+Text test_text;
 GLuint test_texture;
-Bitmap test_bmp;
 
 void Test_Init() {
-	Test_Vertex quad_verts[6] = {
-		//	 POSITION		   UV
-		{-1.f,		-1.f,	0.f, 0.f},
-		{ 1.f,		-1.f,	1.f, 0.f },
-		{ -1.f,		1.f,	0.f, 1.f },
-		{ 1.f,		1.f,	1.f, 1.f },
-		{ -1.f,		1.f,	0.f, 1.f },
-		{ 1.f,		-1.f,	1.f, 0.f }
-	};
+	test_text = CreateText();
 
-	//Generate VAO and VBO
-	glGenVertexArrays(1, &test_vao);
-	glGenBuffers(1, &test_vbo);
+	SetTextString(&test_text, "AYY LMAO");
 
-	//Set VBO data
-	glBindVertexArray(test_vao);
-	glBindBuffer(GL_ARRAY_BUFFER, test_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_verts), quad_verts, GL_STATIC_DRAW);
-
-	//Set VAO (shader) attributes
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Test_Vertex), (GLvoid*)offsetof(Test_Vertex, position));
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Test_Vertex), (GLvoid*)offsetof(Test_Vertex, uv));
-
-	test_bmp = LoadBMP("Textures/bitmap.bmp");
-
-	//Generate and bind texture, set data and parameters
-	glGenTextures(1, &test_texture);
-	glBindTexture(GL_TEXTURE_2D, test_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 
-		test_bmp.width, test_bmp.height, 0, GL_BGR, GL_UNSIGNED_BYTE, test_bmp.buffer);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	Bitmap bmp = LoadBMP("Textures/Font.bmp");
+	test_texture = TextureFromBMP(&bmp, true);
 }
 
 //Render test vao and texture
 void Test_Render() {
-	glUseProgram(g_shader);
-	glBindVertexArray(test_vao);
+	glUseProgram(g_textshader);
 	glBindTexture(GL_TEXTURE_2D, test_texture);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	RenderText(&test_text);
 }
