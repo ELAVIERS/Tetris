@@ -147,19 +147,25 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Bitmap.c" />
+    <ClCompile Include="ConfigLoader.c" />
     <ClCompile Include="Error.c" />
+    <ClCompile Include="IO.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Resource.c" />
     <ClCompile Include="Shader.c" />
+    <ClCompile Include="String.c" />
     <ClCompile Include="Text.c" />
     <ClCompile Include="Texture.c" />
     <ClCompile Include="Timing.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h" />
+    <ClInclude Include="ConfigLoader.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="IO.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="String.h" />
     <ClInclude Include="Text.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Timing.h" />

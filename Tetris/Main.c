@@ -1,5 +1,7 @@
 #include "Bitmap.h"
+#include "ConfigLoader.h"
 #include "Error.h"
+#include "IO.h"
 #include "Resource.h"
 #include "Shader.h"
 #include "Text.h"
@@ -116,7 +118,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//Obtain shader source strings from resource
 	char *frag_src =		LoadStringResource(instance, SHADER_FRAG);
 	char *vert_src =		LoadStringResource(instance, SHADER_VERT);
-	char *text_frag_src = LoadStringResource(instance, SHADER_TEXTFRAG);
+	char *text_frag_src =	LoadStringResource(instance, SHADER_TEXTFRAG);
 
 	if (frag_src == NULL || vert_src == NULL || text_frag_src == NULL) {
 		ErrorMessage("Would you care to explain as to why the shaders don't exist mate?");
@@ -127,6 +129,9 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	g_textshader = CreateShaderProgram(text_frag_src, vert_src);
 
 	InitTimer();
+
+	Configuration *texture_configs;
+	unsigned int texture_config_count = LoadConfigsFromDir("Textures/", "*.cfg", &texture_configs);
 
 	Test_Init();
 
