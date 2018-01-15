@@ -7,6 +7,7 @@
 
 Text CreateText() {
 	Text text;
+	text.data = NULL;
 	glGenVertexArrays(1, &text.vao);
 	glGenBuffers(1, &text.vbo);
 	return text;
@@ -58,7 +59,10 @@ unsigned int CharCount(const char *string) {
 
 void SetTextString(Text *text, const char *string) {
 	text->index_count = 6 * CharCount(string);
-	Vertex_2P_2UV *verts = malloc(sizeof(Vertex_2P_2UV) * text->index_count);
+
+	free(text->data);
+	Vertex_2P_2UV *verts = (Vertex_2P_2UV*)malloc(sizeof(Vertex_2P_2UV) * text->index_count);
+	text->data = verts;
 
 	float uv_sz = 1.f / (float)DIVS;
 	float x = -1.f;
@@ -113,7 +117,4 @@ void SetTextString(Text *text, const char *string) {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_2P_2UV), (GLvoid*)offsetof(Vertex_2P_2UV, position));
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_2P_2UV), (GLvoid*)offsetof(Vertex_2P_2UV, uv));
-
-
-	//free(verts);
 }

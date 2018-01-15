@@ -1,5 +1,6 @@
 #include "Bitmap.h"
 #include "ConfigLoader.h"
+#include "Dvar.h"
 #include "Error.h"
 #include "IO.h"
 #include "Resource.h"
@@ -7,6 +8,7 @@
 #include "Text.h"
 #include "Texture.h"
 #include "Timing.h"
+#include "Variables.h"
 #include <GL/glew.h>
 #include <stdbool.h>
 #include <Windows.h>
@@ -46,6 +48,7 @@ LRESULT CALLBACK windowproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 //Temporary stuff
 void Test_Init();
 void Test_Render();
+void Test_Free();
 
 HDC g_devicecontext;
 GLuint g_shader;
@@ -129,9 +132,14 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	g_textshader = CreateShaderProgram(text_frag_src, vert_src);
 
 	InitTimer();
+	InitDvars();
 
 	Configuration *texture_configs;
 	unsigned int texture_config_count = LoadConfigsFromDir("Textures/", "*.cfg", &texture_configs);
+	for (unsigned int i = 0; i < texture_config_count; ++i)
+		RunConfig(texture_configs[i]);
+
+	FreeConfigurations(texture_configs, texture_config_count);
 
 	Test_Init();
 
@@ -155,6 +163,12 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 		Render();
 		g_deltaseconds = GetDeltaTime();
 	}
+
+	//
+	//Close Game
+	//
+	Test_Free();
+	FreeDvars();
 
 	return 0;
 }
@@ -187,4 +201,8 @@ void Test_Render() {
 	glUseProgram(g_textshader);
 	glBindTexture(GL_TEXTURE_2D, test_texture);
 	RenderText(&test_text);
+}
+
+void Test_Free() {
+	free(test_text.data);
 }

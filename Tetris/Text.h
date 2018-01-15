@@ -11,6 +11,8 @@ typedef struct {
 	GLuint vao;
 	GLuint vbo;
 	unsigned int index_count;
+
+	void *data;
 } Text;
 
 Text CreateText();

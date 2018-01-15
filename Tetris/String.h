@@ -1,5 +1,7 @@
 #pragma once
 
+char* DupString(const char *source);
+
 /*
 	TakeLine
 

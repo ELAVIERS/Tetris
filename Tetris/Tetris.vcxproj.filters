@@ -51,6 +51,12 @@
     <ClCompile Include="String.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Dvar.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Variables.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h">
@@ -84,6 +90,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="String.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dvar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Variables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

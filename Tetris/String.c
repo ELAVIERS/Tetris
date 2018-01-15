@@ -1,6 +1,15 @@
 #include "String.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+char* DupString(const char *source) {
+	unsigned int length = strlen(source) + 1;
+	char *string = (char*)malloc(length);
+	strcpy_s(string, length, source);
+	return string;
+}
+
 
 #define END_OF_LINE(CHAR) (CHAR == '\n' || CHAR == '\r')
 

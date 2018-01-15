@@ -8,6 +8,35 @@
 #include <stdlib.h>
 #include <Windows.h>
 
+void FreeStatements(Statement *statements, unsigned int count) {
+	//For each statement
+	for (unsigned int i = 0; i < count; ++i) {
+		//Free token strings
+		for (unsigned int j = 0; j < statements[i].count; ++j)
+			free(statements[i].tokens[j]);
+		
+		//Free token pointers
+		free(statements[i].tokens);
+	}
+
+	//Free the array
+	free(statements);
+}
+
+void FreeConfigurations(Configuration *configs, unsigned int count) {
+	for (unsigned int i = 0; i < count; ++i) {
+		free(configs[i].name);
+		free(configs[i].path);
+
+		FreeStatements(configs[i].statements, configs[i].count);
+	}
+
+	free(configs);
+}
+
+
+//
+
 inline bool IsLetter(char c) {
 	return c > (char)32;
 }
@@ -24,7 +53,7 @@ unsigned int SplitTokens(const char *string, char ***out_tokens) {
 	}
 
 	if (token_count) {
-		char **tokens = malloc(sizeof(char*) * token_count);
+		char **tokens = (char**)malloc(sizeof(char*) * token_count);
 
 		unsigned int token = 0;
 		for (const char *c = string; *c != '\0';) {
@@ -33,7 +62,7 @@ unsigned int SplitTokens(const char *string, char ***out_tokens) {
 				for (const char *c2 = c; IsLetter(*c2); ++c2)
 					++length;
 
-				tokens[token] = malloc(length + 1);
+				tokens[token] = (char*)malloc(length + 1);
 
 				for (unsigned int i = 0; i < length; ++i)
 					tokens[token][i] = c[i];
@@ -61,7 +90,7 @@ unsigned int LoadConfigFile(const char *filepath, Statement **out_statements) {
 
 	unsigned int line_count = 0;
 
-	Statement *statements = malloc(0);
+	Statement *statements = NULL;
 
 	char line[LINE_MAX];
 	unsigned int index = 0;
@@ -70,7 +99,7 @@ unsigned int LoadConfigFile(const char *filepath, Statement **out_statements) {
 	while (chars_to_next_line = TakeLine(line, fbuffer + bufferindex, LINE_MAX)) {
 		if (line[0] != '/') {
 			++line_count;
-			statements = realloc(statements, line_count * sizeof(Statement));
+			statements = (Statement*)realloc(statements, line_count * sizeof(Statement));
 
 			statements[index].count = SplitTokens(line, &statements[index].tokens);
 			++index;
@@ -96,20 +125,15 @@ unsigned int LoadConfigMulti(const char *directory, const char *filter, Configur
 	if (filecount == 0)
 		return 0;
 
-	Configuration *config = malloc(sizeof(Configuration) * filecount);
+	Configuration *config = (Configuration*)malloc(sizeof(Configuration) * filecount);
 
 	char filepath[MAX_PATH];
 	for (int fid = 0; fid < filecount; ++fid) {
 		strcpy_s(filepath, MAX_PATH, directory);
 		strcat_s(filepath, MAX_PATH, files[fid]);
 
-		unsigned int pathlen = strlen(directory) + 1;
-		config[fid].path = malloc(pathlen);
-		strcpy_s(config[fid].path, pathlen, directory);
-
-		unsigned int namelen = strlen(files[fid]) + 1;
-		config[fid].name = malloc(namelen);
-		strcpy_s(config[fid].name, namelen, files[fid]);
+		config[fid].path = DupString(directory);
+		config[fid].name = DupString(files[fid]);
 
 		free(files[fid]);
 
@@ -175,7 +199,7 @@ unsigned int LoadConfigsFromDir(const char *directory, const char *filter, Confi
 		if (temp_config_count != 0) {
 			int first = config_count;
 			config_count += temp_config_count;
-			configs = realloc(configs, config_count);
+			configs = (Configuration*)realloc(configs, config_count * sizeof(Configuration));
 
 			for (int i = 0; i < temp_config_count; ++i) {
 				configs[first + i] = temp_configs[i];
@@ -188,4 +212,15 @@ unsigned int LoadConfigsFromDir(const char *directory, const char *filter, Confi
 
 	*out_configs = configs;
 	return dir_count;
+}
+
+#include "Dvar.h"
+
+void RunConfig(Configuration config) {
+
+	for (unsigned int i = 0; i < config.count; ++i) {
+		HandleCommand(config.statements[i].tokens, config.statements[i].count);
+	}
+
+
 }

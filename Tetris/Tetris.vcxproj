@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="Bitmap.c" />
     <ClCompile Include="ConfigLoader.c" />
+    <ClCompile Include="Dvar.c" />
     <ClCompile Include="Error.c" />
     <ClCompile Include="IO.c" />
     <ClCompile Include="Main.c" />
@@ -157,10 +158,12 @@
     <ClCompile Include="Text.c" />
     <ClCompile Include="Texture.c" />
     <ClCompile Include="Timing.c" />
+    <ClCompile Include="Variables.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h" />
     <ClInclude Include="ConfigLoader.h" />
+    <ClInclude Include="Dvar.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="Resource.h" />
@@ -169,6 +172,7 @@
     <ClInclude Include="Text.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Timing.h" />
+    <ClInclude Include="Variables.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
