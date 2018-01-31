@@ -1,10 +1,12 @@
 #include "String.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 char* DupString(const char *source) {
-	unsigned int length = strlen(source) + 1;
+	size_t length = strlen(source) + 1;
 	char *string = (char*)malloc(length);
 	strcpy_s(string, length, source);
 	return string;
@@ -25,12 +27,95 @@ unsigned int TakeLine(char dest[], const char *src, unsigned int count) {
 	}
 
 	//Copy line from src to dest
-	int line_length;
-	for (line_length = 0; line_length < count && !END_OF_LINE(src[line_length]) && src[line_length] != '\0'; ++line_length)
+	unsigned int line_length;
+	for (line_length = 0; line_length < count && !END_OF_LINE(src[line_length]) && src[line_length] != '\0'; ++line_length) {
+		//If we are at a #, increment src until src[line_length] is a letter
+		if (src[line_length] == '#')
+			do ++skip;
+			while ((++src)[line_length] <= ' ');
+
 		dest[line_length] = src[line_length];
+	}
 
 	dest[line_length] = '\0';
 
 	//Return total of skipped characters and line characters
 	return skip + line_length;
+}
+
+char* FloatToString(float value) {
+	char* string = (char*)malloc(13);
+	sprintf_s(string, 13, "%f", value);
+	return string;
+}
+
+inline bool IsLetter(char c) {
+	return c > ' ';
+}
+
+unsigned int SplitTokens(const char *string, char ***out_tokens) {
+	unsigned int token_count = 0;
+
+	for (const char *c = string; *c != '\0';) {
+		if (IsLetter(*c)) {
+			++token_count;
+			while (IsLetter(*(++c)));
+		}
+		else ++c;
+	}
+
+	if (token_count) {
+		char **tokens = (char**)malloc(sizeof(char*) * token_count);
+
+		unsigned int token = 0;
+		for (const char *c = string; *c != '\0';) {
+			if (IsLetter(*c)) {
+				unsigned int length = 0;
+				for (const char *c2 = c; IsLetter(*c2); ++c2)
+					++length;
+
+				tokens[token] = (char*)malloc(length + 1);
+
+				for (unsigned int i = 0; i < length; ++i)
+					tokens[token][i] = c[i];
+
+				tokens[token][length] = '\0';
+
+				++token;
+				while (IsLetter(*(++c)));
+			}
+			else ++c;
+		}
+
+		*out_tokens = tokens;
+	}
+
+	return token_count;
+}
+
+void FreeTokens(char **tokens, unsigned int count) {
+	if (count == 0)
+		return;
+	
+	for (unsigned int i = 0; i < count; ++i)
+		free(tokens[i]);
+	
+	free(tokens);
+}
+
+char* SeperateDir(const char *filepath) {
+	unsigned int last = 0;
+	for (unsigned int i = 0; filepath[i] != '\0'; ++i)
+		if (filepath[i] == '/')
+			last = i;
+
+	if (last == 0)
+		return DupString("");
+
+	char *dir = (char*)malloc(last + 2);
+	for (unsigned int i = 0; i <= last; ++i)
+		dir[i] = filepath[i];
+	dir[last + 1] = '\0';
+
+	return dir;
 }

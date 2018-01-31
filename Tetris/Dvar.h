@@ -1,5 +1,4 @@
 #pragma once
-#include <stdbool.h>
 
 typedef enum {
 	DVT_FUNCTION,
@@ -8,42 +7,62 @@ typedef enum {
 } DvarType;
 
 typedef float DFloat;
-typedef char* DString;
-typedef void (*DFunc)(const char **tokens, unsigned int count);
+typedef void DFunc(const char **tokens, unsigned int count);
+typedef DFunc* DFuncPtr;
 
 typedef union {
-	DFunc function;
-	DFloat number;
-	DString string;
+	DFloat dfloat;
+	DFuncPtr dfunc;
+	char *dstring;
 } DvarValue;
 
-typedef struct Dvar_s {
-	char *name;
-	DvarType type;
-	DvarValue data;
-} Dvar;
+typedef void DvarCallback(DvarValue);
+typedef DvarCallback* DvarCallbackPtr;
 
-void _AddDvar(const char *name, DvarType type, DvarValue value);
-void* _GetDvar(const char *name, DvarType type);
+typedef void* HDvar;
 
-#define DFLOAT(VAR) VAR = (DFloat*)_GetDvar(#VAR, DVT_FLOAT)
-#define DSTRING(VAR) VAR = (DString*)_GetDvar(#VAR, DVT_STRING)
-#define DFUNC(VAR) VAR = (DFunc*)_GetDvar(#VAR, DVT_FUNCTION)
+void AddDvarC(const char *name, DvarType, DvarValue, DvarCallbackPtr);
+void SetDvar(HDvar, DvarValue);
+HDvar GetDvar(const char *name);
 
-inline void AddDFloat(const char *name, DFloat value) { 
-	DvarValue data = {.number = value};
-	_AddDvar(name, DVT_FLOAT, data);
+const char*	HDvarName(HDvar);
+char*		HDvarValueAsString(HDvar);
+
+inline void AddDFloatC(const char *name, DFloat value, DvarCallbackPtr callback) {
+	DvarValue v = { .dfloat = value };
+	AddDvarC(name, DVT_FLOAT, v, callback);
+}
+inline void SetDFloat(HDvar dvar, DFloat value) {
+	DvarValue v = { .dfloat = value };
+	SetDvar(dvar, v);
 }
 
-inline void AddDString(const char *name, DString value) {
-	DvarValue data = { .string = value };
-	_AddDvar(name, DVT_STRING, data);
+inline void AddDFunctionC(const char *name, DFuncPtr value, DvarCallbackPtr callback) {
+	DvarValue v = { .dfunc = value };
+	AddDvarC(name, DVT_FUNCTION, v, callback);
+}
+inline void SetDFunction(HDvar dvar, DFuncPtr value) {
+	DvarValue v = { .dfunc = value };
+	SetDvar(dvar, v);
 }
 
-inline void AddDFunction(const char *name, DFunc value) {
-	DvarValue data = { .function = value };
-	_AddDvar(name, DVT_FUNCTION, data);
+inline void AddDStringC(const char *name, char *value, DvarCallbackPtr callback) {
+	DvarValue v = { .dstring = value };
+	AddDvarC(name, DVT_STRING, v, callback);
 }
+inline void SetDString(HDvar dvar, char *value) {
+	DvarValue v = { .dstring = value };
+	SetDvar(dvar, v);
+}
+
+
+#define AddDFloat(NAME, VALUE)		AddDFloatC(NAME, VALUE, 0)
+#define AddDFunction(NAME, VALUE)	AddDFunctionC(NAME, VALUE, 0)
+#define AddDString(NAME, VALUE)		AddDStringC(NAME, VALUE, 0)
+
+#define RegDStringC(DVAR, VALUE, CALLBACK) \
+	AddDStringC(#DVAR, VALUE, CALLBACK); \
+	DVAR = GetDvar(#DVAR)
 
 void FreeDvars();
 

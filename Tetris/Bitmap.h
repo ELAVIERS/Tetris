@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include <stdint.h>
 
 /*
@@ -8,11 +9,11 @@
 */
 
 typedef struct {
-	uint8_t* buffer;
+	uint8_t *buffer;
 	uint32_t width;
 	uint32_t height;
 	uint16_t bitcount;
 } Bitmap;
 
-Bitmap LoadBMP(const char *filepath);
-void DeleteBMP(Bitmap*);
+bool LoadBMP(const char *filepath, Bitmap *out_bmp);
+void FreeBMPBuffer(Bitmap*);

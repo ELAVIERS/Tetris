@@ -15,3 +15,4 @@ unsigned int FindFilesInDirectory(const char *filepath, char ***out_files, DWORD
 	Returns bytes read
 */
 unsigned int FileRead(const char *filepath, char **buffer_out);
+void FileWrite(const char *filepath, const char *buffer);

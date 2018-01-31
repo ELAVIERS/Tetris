@@ -34,7 +34,7 @@ unsigned int FindFilesInDirectory(const char *filepath, char ***out_files, DWORD
 }
 
 unsigned int FileRead(const char *filepath, char **buffer_out) {
-	HANDLE file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+	HANDLE file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (!file)
 		return 0;
 
@@ -52,4 +52,14 @@ unsigned int FileRead(const char *filepath, char **buffer_out) {
 
 	*buffer_out = buffer;
 	return file_len.LowPart;
+}
+
+void FileWrite(const char *filepath, const char *buffer) {
+	HANDLE file = CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (!file)
+		return;
+
+	WriteFile(file, (LPCVOID)buffer, (DWORD)strlen(buffer), NULL, NULL);
+
+	CloseHandle(file);
 }

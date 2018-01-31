@@ -15,7 +15,7 @@ GLuint TextureFromBMP(Bitmap *bmp, bool delete) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	if (delete) DeleteBMP(bmp);
+	if (delete) FreeBMPBuffer(bmp);
 
 	return texture;
 }

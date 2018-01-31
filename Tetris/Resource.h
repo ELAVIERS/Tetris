@@ -6,11 +6,12 @@
 	Defines resource IDs
 */
 
-#define	IDI_ICON		101
+#define ID_VERSION			1
+#define	IDI_ICON			101
 
-#define SHADER_FRAG		1001
-#define SHADER_VERT		1002
-#define SHADER_TEXTFRAG 1003
+#define ID_SHADER_FRAG		1001
+#define ID_SHADER_VERT		1002
+#define ID_SHADER_TEXTFRAG	1003
 
 #include <Windows.h>
 

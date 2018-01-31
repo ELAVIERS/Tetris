@@ -1,21 +1,18 @@
 #include "Bitmap.h"
 
-#include "Error.h"
+#include "Console.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-#define ERROR_LEN 256
 
 //Reads a little-endian 2 byte value from file
-inline uint16_t Read2B(FILE* file) {
+inline uint16_t Read2B(FILE *file) {
 	unsigned char v[2];
 	fread(v, 1, 2, file);
 	return v[0] + (v[1] << 8);
 }
 
 //Reads a little-endian 4 byte value from file
-inline uint32_t Read4B(FILE* file) {
+inline uint32_t Read4B(FILE *file) {
 	unsigned char v[4];
 	fread(v, 1, 4, file);
 	return v[0] + (v[1] << 8) + (v[2] << 16) + (v[3] << 24);
@@ -23,23 +20,20 @@ inline uint32_t Read4B(FILE* file) {
 
 //Loads a BMP file from filepath
 //http://www.dragonwins.com/domains/getteched/bmp/bmpfileformat.htm
-Bitmap LoadBMP(const char* filepath) {
-	Bitmap bmp = { NULL };
-
+bool LoadBMP(const char *filepath, Bitmap *bmp) {
 	FILE* file;
 	fopen_s(&file, filepath, "rb");
 
 	if (!file) {
-		char error[ERROR_LEN] = "Could not load bmp file \"";
-		strcat_s(error, ERROR_LEN, filepath);
-		strcat_s(error, ERROR_LEN, "\"");
-		ErrorMessage(error);
-		return bmp;
+		ConsolePrint("Error : could not load bitmap \"");
+		ConsolePrint(filepath);
+		ConsolePrint("\"\n");
+		return false;
 	}
 	
 	//BMP Header
 	if (!(fgetc(file) == 'B' && fgetc(file) == 'M'))
-		return bmp;
+		return false;
 
 	uint32_t file_size = Read4B(file);
 	fseek(file, 4, SEEK_CUR);				//Skip reserved bytes
@@ -47,25 +41,25 @@ Bitmap LoadBMP(const char* filepath) {
 
 	//Image Header
 	uint32_t ih_size = Read4B(file);
-	bmp.width = Read4B(file);
-	bmp.height = Read4B(file);
+	bmp->width = Read4B(file);
+	bmp->height = Read4B(file);
 	fseek(file, 2, SEEK_CUR);				//Skip image plane count
-	bmp.bitcount = Read2B(file);
-	if (Read4B(file) != 0) ErrorMessage("Warning : Image is compressed");	//Compression
+	bmp->bitcount = Read2B(file);
+	if (Read4B(file) != 0) ConsolePrint("Warning : Image is compressed\n");	//Compression
 	uint32_t buffer_len = Read4B(file);
-	if (buffer_len == 0) ErrorMessage("Warning : Unknown buffer length");
+	if (buffer_len == 0) ConsolePrint("Warning : Unknown buffer length\n");
 
 	//Pixel data
 	fseek(file, buffer_offset, SEEK_SET);
-	bmp.buffer = (unsigned char*)malloc(buffer_len);
+	bmp->buffer = (unsigned char*)malloc(buffer_len);
 
-	size_t bytes_read = fread(bmp.buffer, 1, buffer_len, file);
+	size_t bytes_read = fread(bmp->buffer, 1, buffer_len, file);
 	fclose(file);
 
-	return bmp;
+	return true;
 }
 
-void DeleteBMP(Bitmap *bmp) {
+void FreeBMPBuffer(Bitmap *bmp) {
 	if (bmp->buffer) {
 		free(bmp->buffer);
 		bmp->buffer = NULL;
