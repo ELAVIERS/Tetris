@@ -1,10 +1,13 @@
 #version 330
-in vec2 V_Position;
-in vec2 V_UV;
+uniform mat3 u_projection;
+uniform vec2 u_offset;
 
-out vec2 F_UV;
+in vec2 v_position;
+in vec2 v_uv;
+
+out vec2 f_uv;
 
 void main() {
-	F_UV = V_UV;
-	gl_Position = vec4(V_Position, 0, 1);
+	f_uv = v_uv;
+	gl_Position = vec4(u_projection * vec3(v_position + u_offset, 1), 1);
 }

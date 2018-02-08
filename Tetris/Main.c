@@ -3,7 +3,10 @@
 #include "Console.h"
 #include "Dvar.h"
 #include "Error.h"
+#include "Globals.h"
 #include "IO.h"
+#include "Matrix.h"
+#include "Menu.h"
 #include "Resource.h"
 #include "Settings.h"
 #include "Shader.h"
@@ -22,7 +25,7 @@
 	Does all of the important stuff, y'know
 */
 
-bool running = true;
+float **projection;
 
 void Render();
 
@@ -30,7 +33,7 @@ void Render();
 LRESULT CALLBACK windowproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	switch (msg) {
 	case WM_DESTROY:
-		running = false;
+		g_running = false;
 		break;
 	case WM_CLOSE:
 		DestroyWindow(hwnd);
@@ -38,16 +41,29 @@ LRESULT CALLBACK windowproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	case WM_SIZE:
 		glViewport(0, 0, LOWORD(lparam), HIWORD(lparam));
+		Mat3Ortho(projection, LOWORD(lparam), HIWORD(lparam));
 		Render();
+		break;
+
+	case WM_KEYDOWN:
+		switch (wparam) {
+		case VK_UP:
+			ActiveMenu_ChangeSelection(1);
+			break;
+		case VK_DOWN:
+			ActiveMenu_ChangeSelection(-1);
+			break;
+		case VK_RETURN:
+			ActiveMenu_Select();
+			break;
+		}
+
 		break;
 
 	case WM_KEYUP:
 		switch (wparam) {
 		case VK_OEM_3: //~
 			ConsoleOpen();
-			break;
-		case VK_RETURN:
-			SettingsOpen();
 			break;
 		}
 		break;
@@ -58,13 +74,13 @@ LRESULT CALLBACK windowproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	return 0;
 }
 
-HDC g_devicecontext;
-GLuint g_shader;
-GLuint g_textshader;
-float g_deltaseconds;
-float g_runtime;
+HDC device_context;
+GLuint shader;
+GLuint textshader;
 
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_show) {
+	projection = Mat3Alloc();
+
 	//
 	//Window initialisation
 	//Register the window class and create the window
@@ -89,7 +105,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0,
 		NULL, NULL, instance, NULL);
 
-	g_devicecontext = GetDC(window);
+	device_context = GetDC(window);
 
 	//
 	//OpenGL initialisation
@@ -113,11 +129,11 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 		0							//* - Not relevant for finding PFD
 	};
 
-	int pfd_id = ChoosePixelFormat(g_devicecontext, &pfd);
-	SetPixelFormat(g_devicecontext, pfd_id, &pfd);
+	int pfd_id = ChoosePixelFormat(device_context, &pfd);
+	SetPixelFormat(device_context, pfd_id, &pfd);
 
-	HGLRC glcontext = wglCreateContext(g_devicecontext);
-	wglMakeCurrent(g_devicecontext, glcontext);
+	HGLRC glcontext = wglCreateContext(device_context);
+	wglMakeCurrent(device_context, glcontext);
 
 	glewInit();
 	glClearColor(0.f, .2f, 0.f, 1.f);
@@ -136,8 +152,8 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 		return 0;
 	}
 
-	g_shader = CreateShaderProgram(frag_src, vert_src);
-	g_textshader = CreateShaderProgram(text_frag_src, vert_src);
+	shader = CreateShaderProgram(frag_src, vert_src);
+	textshader = CreateShaderProgram(text_frag_src, vert_src);
 
 	InitTimer();
 
@@ -145,58 +161,47 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	ConsoleInit();
 	SettingsInit();
 
+	ConsolePrint("Running config.cfg...\n");
 	RunConfig("config.cfg");
+	ConsolePrint("Done!\n");
 
 	//
 	//Start Game
 	//Show the window, run message loop, and call frames 
 	//
+	CreateMainMenu();
 	ShowWindow(window, cmd_show);
+	g_running = true;
 
 	MSG msg;
-	while (running) {
+	while (g_running) {
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 
 		StartTimer();
-		g_runtime += g_deltaseconds;
 
 		Render();
-		g_deltaseconds = GetDeltaTime();
+		g_delta = GetDeltaTime();
 	}
 
 	//
 	//Close Game
 	//
+	Font_Free(g_font);
+	Font_Free(g_menu_font);
 	FreeDvars();
 
 	return 0;
 }
 
 void Render() {
-	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	UseGLProgram(textshader);
+	ShaderSetUniformMat3(textshader, "u_projection", projection);
+	Menus_Render();
 
-	SwapBuffers(g_devicecontext);
+	SwapBuffers(device_context);
 }
-
-/*
-//
-//TEMPORARY THINGS
-//
-Text test_text;
-GLuint test_texture;
-
-void Test_Init() {
-	test_text = CreateText();
-
-	//Yeah... no.
-	//SetTextString(&test_text, "TETRIS IS A TILE - MATCHING PUZZLE VIDEO GAME, ORIGINALLY DESIGNED AND PROGRAMMED BY RUSSIAN GAME DESIGNER ALEXEY PAJITNOV.[1] IT WAS RELEASED ON JUNE 6, 1984, [2] WHILE HE WAS WORKING FOR THE DORODNITSYN COMPUTING CENTRE OF THE ACADEMY OF SCIENCE OF THE SOVIET UNION IN MOSCOW.[3] HE DERIVED ITS NAME FROM THE GREEK NUMERICAL PREFIX TETRA - (ALL OF THE GAME'S PIECES CONTAIN FOUR SEGMENTS) AND TENNIS, PAJITNOV'S FAVORITE SPORT.[4][5]");
-
-	SetTextString(&test_text, "AYY LMAO");
-
-	Bitmap bmp = LoadBMP("Textures/Font.bmp");
-	test_texture = TextureFromBMP(&bmp, true);
-}
-*/

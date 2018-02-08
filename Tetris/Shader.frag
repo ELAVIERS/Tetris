@@ -1,10 +1,10 @@
 #version 330
-uniform sampler2D S_Texture;
+uniform sampler2D u_texture;
 
-in vec2 F_UV;
+in vec2 f_uv;
 
 out vec4 colour;
 
 void main() {
-	colour = vec4(texture(S_Texture, F_UV).rgb, 1);
+	colour = vec4(texture(u_texture, f_uv).rgb, 1);
 }

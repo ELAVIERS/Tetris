@@ -4,6 +4,7 @@
 #include "Board.h"
 #include "Config.h"
 #include "Dvar.h"
+#include "Globals.h"
 #include "Resource.h"
 #include "String.h"
 #include <CommCtrl.h>
@@ -180,7 +181,7 @@ void ConsolePrint(const char *string) {
 	SetWindowTextA(hwnd_console_text, console_buffer);
 }
 
-DFunc Console_Clear, Console_Run, Console_Save;
+DFunc Console_Clear, Console_Exit, Console_List, Console_Run, Console_Save;
 
 void ConsoleInit() {
 	ConsoleResetBuffer();
@@ -214,6 +215,8 @@ void ConsoleInit() {
 	//
 	////
 	AddDFunction(	"clear",					Console_Clear);
+	AddDFunction(	"exit",						Console_Exit);
+	AddDFunction(	"list",						Console_List);
 	AddDFunction(	"run",						Console_Run);
 	AddDFunction(	"save",						Console_Save);
 
@@ -222,6 +225,9 @@ void ConsoleInit() {
 
 	AddDStringC(	"cl_font_texture",			"",	C_FontTexture);
 	AddDFloatC(		"cl_fontid_size",			0, C_FontIDSize);
+
+	AddDStringC(	"cl_menu_font_texture",		"", C_MenuFontTexture);
+	AddDFloatC(		"cl_menu_fontid_size",		0, C_MenuFontIDSize);
 
 	AddDStringC(	"cl_block_texture",			"", C_BlockTexture);
 	AddDFloatC(		"cl_texid_size",			0, C_BlockIDSize);
@@ -233,6 +239,15 @@ void ConsoleInit() {
 void Console_Clear(const char **tokens, unsigned int count) {
 	ConsoleResetBuffer();
 	SetWindowTextA(hwnd_console_text, console_buffer);
+}
+
+void Console_Exit(const char **tokens, unsigned int count) {
+	g_running = false;
+}
+
+void Console_List(const char **tokens, unsigned int count) {
+	ConsolePrint("\nDynamic variables:\n");
+	ListDvars();
 }
 
 void Console_Run(const char **tokens, unsigned int count) {

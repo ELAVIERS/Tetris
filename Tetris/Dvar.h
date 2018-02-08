@@ -64,6 +64,7 @@ inline void SetDString(HDvar dvar, char *value) {
 	AddDStringC(#DVAR, VALUE, CALLBACK); \
 	DVAR = GetDvar(#DVAR)
 
+void ListDvars();
 void FreeDvars();
 
 void HandleCommand(const char **tokens, unsigned int count);

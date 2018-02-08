@@ -64,3 +64,22 @@ GLuint CreateShaderProgram(const GLchar* frag_src, const GLchar* vert_src) {
 
 	return program;
 }
+
+#include "Console.h"
+
+GLint ShaderGetLocation(GLuint program, const char *name) {
+	GLint location = glGetUniformLocation(program, name);
+	if (location < 0) {
+		ConsolePrint("Uniform shader variable \"");
+		ConsolePrint(name);
+		ConsolePrint("\" not found!\n");
+	}
+}
+
+void ShaderSetUniformMat3(GLuint program, const char *name, const float **data) {
+	glUniformMatrix3fv(ShaderGetLocation(program, name), 1, GL_FALSE, &data[0][0]);
+}
+
+void ShaderSetUniformVec3(GLuint program, const char *name, const float *data) {
+	glUniform3f(ShaderGetLocation(program, name), data[0], data[1], data[2]);
+}

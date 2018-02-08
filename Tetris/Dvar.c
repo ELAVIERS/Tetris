@@ -43,7 +43,7 @@ void AddDvarNode(DvarNode* node, Dvar *dvar, unsigned int depth) {
 		return;
 
 	while (1) {
-		if (node->key == dvar->name[depth]) {
+		if (dvar->name[depth] == node->key) {
 			if (node->child) {
 				AddDvarNode(node->child, dvar, depth + 1);
 				return;
@@ -55,6 +55,13 @@ void AddDvarNode(DvarNode* node, Dvar *dvar, unsigned int depth) {
 
 		if (!node->next) {
 			node->next = NewDvarNode(dvar, depth);
+			return;
+		}
+
+		if (dvar->name[depth] < node->next->key) {
+			DvarNode* next_old = node->next;
+			node->next = NewDvarNode(dvar, depth);
+			node->next->next = next_old;
 			return;
 		}
 
@@ -99,6 +106,30 @@ void FreeNode(DvarNode *node) {
 
 		node = next;
 	} while (next);
+}
+
+void ListNodes(DvarNode *node) {
+	for (; node; node = node->next) {
+		if (node->dvar) {
+			switch (node->dvar->type) {
+			case DVT_FLOAT:
+				ConsolePrint("FLOAT\t");
+				break;
+			case DVT_FUNCTION:
+				ConsolePrint("FUNC\t");
+				break;
+			case DVT_STRING:
+				ConsolePrint("STRING\t");
+				break;
+			}
+
+			ConsolePrint(node->dvar->name);
+			ConsolePrint("\n");
+		}
+
+		if (node->child)
+			ListNodes(node->child);
+	}
 }
 
 ////////////////
@@ -193,6 +224,11 @@ char* HDvarValueAsString(HDvar hdvar) {
 	}
 
 	return NULL;
+}
+
+void ListDvars() {
+	if (dvar_root)
+		ListNodes(dvar_root);
 }
 
 void FreeDvars() {

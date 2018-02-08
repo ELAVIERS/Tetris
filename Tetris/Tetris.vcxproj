@@ -153,8 +153,12 @@
     <ClCompile Include="Config.c" />
     <ClCompile Include="Dvar.c" />
     <ClCompile Include="Error.c" />
+    <ClCompile Include="Font.c" />
+    <ClCompile Include="Globals.c" />
     <ClCompile Include="IO.c" />
     <ClCompile Include="Main.c" />
+    <ClCompile Include="Matrix.c" />
+    <ClCompile Include="Menu.c" />
     <ClCompile Include="Resource.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
@@ -172,7 +176,11 @@
     <ClInclude Include="Config.h" />
     <ClInclude Include="Dvar.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="Font.h" />
+    <ClInclude Include="Globals.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="Matrix.h" />
+    <ClInclude Include="Menu.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />
