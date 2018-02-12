@@ -2,6 +2,7 @@
 
 #include "Font.h"
 #include "Globals.h"
+#include "Matrix.h"
 #include "Shader.h"
 #include "Text.h"
 #include <stdlib.h>
@@ -15,7 +16,7 @@ typedef struct {
 	MenuItem *items;
 	unsigned int item_count;
 
-	unsigned int x, y;
+	Mat3 transform;
 	unsigned int selected;
 } Menu;
 
@@ -23,8 +24,7 @@ void Menu_Zero(Menu *menu) {
 	menu->items = 0;
 	menu->item_count = 0;
 	menu->selected = 0;
-	menu->x = 0;
-	menu->y = 0;
+	Mat3Identity(menu->transform);
 }
 
 void Menu_AddItem(Menu *menu, const char *text, void (*callback)()) {
@@ -69,14 +69,14 @@ float colour_normal[3] = { 1.f, 1.f, 1.f };
 float colour_select[3] = { 0.f, 0.f, 1.f };
 
 void Menu_Render(const Menu* menu) {
-	glUniform2f(ShaderGetLocation(current_shader_program, "u_offset"), menu->x, menu->y);
-	ShaderSetUniformVec3(current_shader_program, "u_colour", colour_normal);
+	ShaderSetUniformMat3(g_active_shader, "u_transform", menu->transform);
+	ShaderSetUniformVec3(g_active_shader, "u_colour", colour_normal);
 
 	for (unsigned int i = 0; i < menu->item_count; ++i) {
 		if (i == menu->selected) {
-			ShaderSetUniformVec3(current_shader_program, "u_colour", colour_select);
+			ShaderSetUniformVec3(g_active_shader, "u_colour", colour_select);
 			RenderText(menu->items[i].text);
-			ShaderSetUniformVec3(current_shader_program, "u_colour", colour_normal);
+			ShaderSetUniformVec3(g_active_shader, "u_colour", colour_normal);
 		}
 		else RenderText(menu->items[i].text);
 	}
@@ -102,15 +102,15 @@ char **modepaths;
 unsigned int mode_count;
 
 void CreateMenu_Play() {
-	active_menu = m_play - menus;
+	active_menu = (unsigned int)(m_play - menus);
 	Menu_Zero(m_play);
-	m_play->x = 288;
+	Mat3Translate(m_play->transform, 288, 0);
 
 	char **filenames;
 	mode_count = FindFilesInDirectory("Modes/*.cfg", &filenames, 0xFFFFFFFF);
 	
 	if (mode_count) {
-		modepaths = (char*)malloc(mode_count * sizeof(char*));
+		modepaths = (char**)malloc(mode_count * sizeof(char*));
 
 		for (unsigned int i = 0; i < mode_count; ++i) {
 			modepaths[i] = (char*)malloc(MAX_PATH);
@@ -132,6 +132,12 @@ void play_startgame() {
 	FreeTokens(modepaths, mode_count);
 	Menu_Free(m_play);
 	Menu_Free(m_main);
+
+	g_board = BoardCreate();
+	TEMP_UpdateBoardSize();
+
+	g_menu_active = false;
+
 }
 
 void main_play() {
@@ -146,15 +152,17 @@ void main_quit() {
 	g_running = false;
 }
 
-//Publically available functions here
+//Publicly available functions here
 
 void CreateMainMenu() {
-	active_menu = m_main - menus;
+	active_menu = (unsigned int)(m_main - menus);
 	Menu_Zero(m_main);
 
 	Menu_AddItem(m_main, "PLAY", main_play);
 	Menu_AddItem(m_main, "SETTINGS", main_settings);
 	Menu_AddItem(m_main, "EXIT", main_quit);
+
+	g_menu_active = true;
 }
 
 void ActiveMenu_ChangeSelection(int amount) {
@@ -166,7 +174,7 @@ void ActiveMenu_Select() {
 }
 
 void Menus_Render() {
-	glBindTexture(GL_TEXTURE_2D, g_menu_font->texture);
+	glBindTexture(GL_TEXTURE_2D, g_menu_font->texture->glid);
 
 	for (unsigned int i = 0; i < MENU_COUNT; ++i)
 		Menu_Render(menus + i);

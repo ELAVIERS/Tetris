@@ -1,5 +1,6 @@
 #pragma once
 #include "Text.h"
+#include "Texture.h"
 
 /*
 	Font.h
@@ -13,8 +14,7 @@ typedef struct TextNode_t {
 } TextNode;
 
 typedef struct {
-	GLuint			texture;
-	unsigned int	texture_size;
+	Texture			*texture;
 	unsigned int	char_size;
 
 	TextNode		*node;
@@ -34,5 +34,8 @@ void Font_Free(Font*);
 
 //Returns the current UV size of the font
 inline float Font_UVSize(const Font *font) {
-	return (float)font->char_size / (float)font->texture_size;
+	if (font->texture->width == 0)
+		return 0;
+
+	return (float)font->char_size / (float)font->texture->width;
 }

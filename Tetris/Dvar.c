@@ -226,6 +226,15 @@ char* HDvarValueAsString(HDvar hdvar) {
 	return NULL;
 }
 
+float HDFloatValue(HDvar hdvar) {
+	Dvar *dvar = (Dvar*)hdvar;
+
+	if (dvar->type == DVT_FLOAT)
+		return dvar->data.dfloat;
+
+	return 0;
+}
+
 void ListDvars() {
 	if (dvar_root)
 		ListNodes(dvar_root);

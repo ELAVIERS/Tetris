@@ -74,9 +74,11 @@ GLint ShaderGetLocation(GLuint program, const char *name) {
 		ConsolePrint(name);
 		ConsolePrint("\" not found!\n");
 	}
+
+	return location;
 }
 
-void ShaderSetUniformMat3(GLuint program, const char *name, const float **data) {
+void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data) {
 	glUniformMatrix3fv(ShaderGetLocation(program, name), 1, GL_FALSE, &data[0][0]);
 }
 

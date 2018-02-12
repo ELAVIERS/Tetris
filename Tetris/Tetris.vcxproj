@@ -159,6 +159,7 @@
     <ClCompile Include="Main.c" />
     <ClCompile Include="Matrix.c" />
     <ClCompile Include="Menu.c" />
+    <ClCompile Include="Quad.c" />
     <ClCompile Include="Resource.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
@@ -181,6 +182,7 @@
     <ClInclude Include="IO.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Menu.h" />
+    <ClInclude Include="Quad.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />
@@ -189,6 +191,7 @@
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Timing.h" />
     <ClInclude Include="Console.h" />
+    <ClInclude Include="Types.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>

@@ -223,14 +223,18 @@ void ConsoleInit() {
 	AddDFunction(	"sv_blocks_add",			SVAddBlock);
 	AddDFunction(	"sv_blocks_clear",			SVClearBlocks);
 
+	AddDFloat(		"sv_board_width",			10);
+	AddDFloat(		"sv_board_height",			20);
+	AddDFloat(		"sv_gravity",				0);
+
 	AddDStringC(	"cl_font_texture",			"",	C_FontTexture);
 	AddDFloatC(		"cl_fontid_size",			0, C_FontIDSize);
 
 	AddDStringC(	"cl_menu_font_texture",		"", C_MenuFontTexture);
 	AddDFloatC(		"cl_menu_fontid_size",		0, C_MenuFontIDSize);
 
-	AddDStringC(	"cl_block_texture",			"", C_BlockTexture);
-	AddDFloatC(		"cl_texid_size",			0, C_BlockIDSize);
+	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture);
+	AddDFloatC(		"cl_texid_size",			0, C_CLBlockIDSize);
 	AddDFunction(	"cl_texid_order",			CLSetTextureIndexOrder);
 	AddDFunction(	"cl_texids_add",			CLAddTextureLevel);
 	AddDFunction(	"cl_texids_clear",			CLClearTextureLevels);

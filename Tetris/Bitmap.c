@@ -1,5 +1,4 @@
 #include "Bitmap.h"
-
 #include "Console.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,11 +56,4 @@ bool LoadBMP(const char *filepath, Bitmap *bmp) {
 	fclose(file);
 
 	return true;
-}
-
-void FreeBMPBuffer(Bitmap *bmp) {
-	if (bmp->buffer) {
-		free(bmp->buffer);
-		bmp->buffer = NULL;
-	}
 }

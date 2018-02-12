@@ -1,7 +1,7 @@
 #pragma once
+#include "Globals.h"
+#include "Matrix.h"
 #include <GL/glew.h>
-
-GLuint current_shader_program;
 
 /*
 	Shader.h
@@ -13,10 +13,10 @@ GLuint CreateShaderProgram(const GLchar* frag_src, const GLchar* vert_src);
 
 inline void UseGLProgram(GLuint program) {
 	glUseProgram(program);
-	current_shader_program = program;
+	g_active_shader = program;
 }
 
 GLint ShaderGetLocation(GLuint shader, const char *name);
 
-void ShaderSetUniformMat3(GLuint program, const char *name, const float **data);
+void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data);
 void ShaderSetUniformVec3(GLuint program, const char *name, const float *data);

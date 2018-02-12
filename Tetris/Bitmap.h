@@ -16,4 +16,3 @@ typedef struct {
 } Bitmap;
 
 bool LoadBMP(const char *filepath, Bitmap *out_bmp);
-void FreeBMPBuffer(Bitmap*);

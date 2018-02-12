@@ -1,7 +1,36 @@
 #pragma once
+#include "Block.h"
+#include "Texture.h"
+#include "Types.h"
+#include <stdbool.h>
 
-void SetBoard(int width, int height);
+typedef struct Board_s {
+	unsigned short x, y, width, height;
+	byte rows, columns;
 
-void CLSetTextureIndexOrder(const char **tokens, unsigned int count);
-void CLAddTextureLevel(const char **tokens, unsigned int count);
-void CLClearTextureLevels(const char **tokens, unsigned int count);
+	char **data;
+
+	Block block;
+} Board;
+
+Board* BoardCreate();
+void BoardRender(const Board*);
+void BoardFree(Board*);
+
+bool BoardInputDown(Board*);
+void BoardInputLeft(Board*);
+void BoardInputRight(Board*);
+void BoardInputCCW(Board*);
+void BoardInputCW(Board*);
+
+short TextureLevelIDIndex(char id);
+void UseNextTextureLevel();
+
+DFunc
+	CLSetTextureIndexOrder,
+	CLAddTextureLevel,
+	CLClearTextureLevels;
+
+DvarCallback
+	C_CLBlockTexture,
+	C_CLBlockIDSize;

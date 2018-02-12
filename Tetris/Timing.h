@@ -6,6 +6,6 @@
 	High-resolution timer
 */
 
-void InitTimer();
-void StartTimer();
-float GetDeltaTime();
+void TimerInit();
+void TimerStart();
+float TimerDelta();

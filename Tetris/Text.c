@@ -26,12 +26,8 @@ void RenderText(const Text *text) {
 	glDrawArrays(GL_TRIANGLES, 0, text->data_length);
 }
 
-inline bool IsSpace(char c) {
-	return c == ' ';
-}
-
 int CharIndex(char c) {
-	if (IsSpace(c))
+	if (c == ' ')
 		return -1;
 
 	//0-9  -> 0-9
@@ -42,6 +38,7 @@ int CharIndex(char c) {
 	if (c >= 'A' && c <= 'Z')
 		return c - 'A' + 10;
 
+	//a-z -> 36-61
 	if (c >= 'a' && c <= 'z')
 		return c - 'a' + 36;
 
@@ -54,7 +51,7 @@ int CharIndex(char c) {
 unsigned int CharCount(const char *string) {
 	unsigned int length = 0;
 	for (const char *c = string; *c != '\0'; ++c)
-		if (!IsSpace(*c))
+		if (*c != ' ')
 			++length;
 
 	return length;
@@ -66,7 +63,7 @@ void GenerateTextData(Text *text, float uv_size) {
 	Vertex_2P_2UV *verts = (Vertex_2P_2UV*)malloc(sizeof(Vertex_2P_2UV) * text->data_length);
 
 	float divs = 1.f / uv_size;
-	float cx = text->x;
+	float cx = (float)text->x;
 	int i = 0;
 	for (const char *c = text->string; *c != '\0'; ++c) {
 		int index = CharIndex(*c);
@@ -118,4 +115,6 @@ void GenerateTextData(Text *text, float uv_size) {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_2P_2UV), (GLvoid*)offsetof(Vertex_2P_2UV, position));
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_2P_2UV), (GLvoid*)offsetof(Vertex_2P_2UV, uv));
+
+	free(verts);
 }

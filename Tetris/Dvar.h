@@ -23,10 +23,11 @@ typedef void* HDvar;
 
 void AddDvarC(const char *name, DvarType, DvarValue, DvarCallbackPtr);
 void SetDvar(HDvar, DvarValue);
-HDvar GetDvar(const char *name);
 
+HDvar GetDvar(const char *name);
 const char*	HDvarName(HDvar);
 char*		HDvarValueAsString(HDvar);
+float		HDFloatValue(HDvar);
 
 inline void AddDFloatC(const char *name, DFloat value, DvarCallbackPtr callback) {
 	DvarValue v = { .dfloat = value };

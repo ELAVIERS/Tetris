@@ -6,6 +6,4 @@ DvarCallback
 	C_FontTexture,
 	C_MenuFontTexture,
 	C_FontIDSize,
-	C_MenuFontIDSize,
-	C_BlockTexture,
-	C_BlockIDSize;
+	C_MenuFontIDSize;
