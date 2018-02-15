@@ -20,4 +20,5 @@ void UseNextBlock(Block*, unsigned short top);
 void BlockRotateCCW(Block*);
 void BlockRotateCW(Block*);
 
-DFunc SVAddBlock, SVClearBlocks;
+DFunc SVAddBlock;
+void ClearBlocks();

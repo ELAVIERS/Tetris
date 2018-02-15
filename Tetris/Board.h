@@ -13,13 +13,12 @@ typedef struct Board_s {
 	Block block;
 } Board;
 
-Board* BoardCreate();
+void SetupBoard(Board*);
 void BoardRender(const Board*);
-void BoardFree(Board*);
+void BoardFree(const Board*);
 
 bool BoardInputDown(Board*);
-void BoardInputLeft(Board*);
-void BoardInputRight(Board*);
+void BoardInputX(Board*, int x);
 void BoardInputCCW(Board*);
 void BoardInputCW(Board*);
 
@@ -28,8 +27,9 @@ void UseNextTextureLevel();
 
 DFunc
 	CLSetTextureIndexOrder,
-	CLAddTextureLevel,
-	CLClearTextureLevels;
+	CLAddTextureLevel;
+
+void ClearTextureLevels();
 
 DvarCallback
 	C_CLBlockTexture,

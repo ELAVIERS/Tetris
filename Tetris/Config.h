@@ -4,7 +4,7 @@
 
 bool RunConfig(const char *filepath);
 
-void AddCvar(HDvar);
+void AddCvar(const Dvar*);
 
 void FreeCvars();
 void SaveCvars();

@@ -31,34 +31,23 @@ inline void BoardUseNextBlock(Board *board) {
 	UseNextBlock(&board->block, board->rows - 1);
 }
 
-Board* BoardCreate() {
-	Board *board = (Board*)malloc(sizeof(Board));
-
-	board->rows = (byte)HDFloatValue(GetDvar("sv_board_height"));
-	board->columns = (byte)HDFloatValue(GetDvar("sv_board_width"));
-
-	board->width = 384;
-	board->height = 768;
-
-	board->x = 0;
-	board->y = 0;
-	
+void SetupBoard(Board* board) {
 	board->data = (char**)malloc(board->rows * sizeof(char*));
 	for (byte i = 0; i < board->rows; ++i)
 		board->data[i] = (char*)calloc(board->columns, sizeof(char));
 
-	float texidsize = HDFloatValue(GetDvar("cl_texid_size"));
+	float texidsize = GetDvar("cl_blockid_size")->value.number;
 	QuadInit(texidsize / (float)tex_blocks.width, texidsize / (float)tex_blocks.height);
 
 	BoardUseNextBlock(board);
-
-	return board;
 }
 
-void BoardFree(Board *board) {
-	free(board->block.data);
+void BoardFree(const Board *board) {
+	for (byte i = 0; i < board->rows; ++i)
+		free(board->data[i]);
+
 	free(board->data);
-	free(board);
+	free(board->block.data);
 }
 
 inline void ClearRow(Board *board, unsigned int row) {
@@ -168,14 +157,9 @@ bool BoardInputDown(Board *board) {
 	return valid;
 }
 
-void BoardInputLeft(Board *board) {
-	if (BoardCheckMove(board, -1, 0))
-		--board->block.x;
-}
-
-void BoardInputRight(Board *board) {
-	if (BoardCheckMove(board, 1, 0))
-		++board->block.x;
+void BoardInputX(Board *board, int x) {
+	if (BoardCheckMove(board, x, 0))
+		board->block.x += x;
 }
 
 void BoardInputCCW(Board *board) {
@@ -251,7 +235,7 @@ void CLAddTextureLevel(const char **tokens, unsigned int count) {
 	}
 }
 
-void CLClearTextureLevels(const char **tokens, unsigned int count) {
+void ClearTextureLevels() {
 	TextureLevel *next;
 	
 	while (first_level) {
@@ -262,11 +246,11 @@ void CLClearTextureLevels(const char **tokens, unsigned int count) {
 	}
 }
 
-void C_CLBlockTexture(DvarValue dstring) {
-	TextureFromFile(dstring.dstring, &tex_blocks);
+void C_CLBlockTexture(DvarValue string) {
+	TextureFromFile(string.string, &tex_blocks);
 }
 
-void C_CLBlockIDSize(DvarValue dfloat) {
-	tex_blocks_divx = tex_blocks.width / (unsigned short)dfloat.dfloat;
-	tex_blocks_divy = tex_blocks.height / (unsigned short)dfloat.dfloat;
+void C_CLBlockIDSize(DvarValue number) {
+	tex_blocks_divx = tex_blocks.width / (unsigned short)number.number;
+	tex_blocks_divy = tex_blocks.height / (unsigned short)number.number;
 }

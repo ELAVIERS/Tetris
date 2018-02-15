@@ -154,8 +154,10 @@
     <ClCompile Include="Dvar.c" />
     <ClCompile Include="Error.c" />
     <ClCompile Include="Font.c" />
+    <ClCompile Include="Game.c" />
     <ClCompile Include="Globals.c" />
     <ClCompile Include="IO.c" />
+    <ClCompile Include="InputManager.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Matrix.c" />
     <ClCompile Include="Menu.c" />
@@ -168,6 +170,7 @@
     <ClCompile Include="Texture.c" />
     <ClCompile Include="Timing.c" />
     <ClCompile Include="Console.c" />
+    <ClCompile Include="Window.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h" />
@@ -178,8 +181,10 @@
     <ClInclude Include="Dvar.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="Font.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="Globals.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="InputManager.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Quad.h" />
@@ -193,6 +198,7 @@
     <ClInclude Include="Console.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="Vertex.h" />
+    <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tetris.rc" />

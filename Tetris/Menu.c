@@ -84,6 +84,7 @@ void Menu_Render(const Menu* menu) {
 
 ////////////////////
 #include "Config.h"
+#include "Game.h"
 #include "Globals.h"
 #include "IO.h"
 #include "Settings.h"
@@ -117,6 +118,7 @@ void CreateMenu_Play() {
 			strcpy_s(modepaths[i], MAX_PATH, "Modes/");
 			strcat_s(modepaths[i], MAX_PATH, filenames[i]);
 
+			CutExt(filenames[i]);
 			Menu_AddItem(m_play, filenames[i], play_startgame);
 
 			free(filenames[i]);
@@ -133,11 +135,7 @@ void play_startgame() {
 	Menu_Free(m_play);
 	Menu_Free(m_main);
 
-	g_board = BoardCreate();
-	TEMP_UpdateBoardSize();
-
-	g_menu_active = false;
-
+	GameBegin(1);
 }
 
 void main_play() {
@@ -161,8 +159,6 @@ void CreateMainMenu() {
 	Menu_AddItem(m_main, "PLAY", main_play);
 	Menu_AddItem(m_main, "SETTINGS", main_settings);
 	Menu_AddItem(m_main, "EXIT", main_quit);
-
-	g_menu_active = true;
 }
 
 void ActiveMenu_ChangeSelection(int amount) {

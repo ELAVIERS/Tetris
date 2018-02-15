@@ -50,14 +50,14 @@ bool RunConfig(const char *filepath) {
 //Config Variables (CVARS) : remember which Dvars to save
 
 typedef struct CVarNode_s {
-	HDvar dvar;
+	const Dvar *dvar;
 
 	struct CVarNode_s *next;
 } CVarNode;
 
 CVarNode *first = NULL;
 
-void AddCvar(HDvar dvar) {
+void AddCvar(const Dvar *dvar) {
 	CVarNode *node = (CVarNode*)malloc(sizeof(CVarNode));
 
 	node->dvar = dvar;
@@ -70,19 +70,20 @@ void FreeCvars() {
 		free(node);
 }
 
+#include "InputManager.h"
+
 void SaveCvars() {
 	char *buffer = NULL;
 	size_t size = 1;
 
 	for (CVarNode *node = first; node; node = node->next) {
-		const char *name = HDvarName(node->dvar);
-		char *value = HDvarValueAsString(node->dvar);
+		char *value = DvarAllocValueString(node->dvar);
 
 		if (value) {
-			size += strlen(name) + 1 + strlen(value) + 1;
+			size += strlen(node->dvar->name) + 1 + strlen(value) + 1;
 			buffer = (char*)realloc(buffer, size);
 
-			strcpy_s(buffer, size, name);
+			strcpy_s(buffer, size, node->dvar->name);
 			strcat_s(buffer, size, " ");
 			strcat_s(buffer, size, value);
 			strcat_s(buffer, size, "\n");
@@ -90,6 +91,16 @@ void SaveCvars() {
 			free(value);
 		}
 	}
+
+	char *bindcfgstring;
+	unsigned int bindcfglength = BindsGetConfigString(&bindcfgstring);
+	if (bindcfglength > 1) {
+		size += bindcfglength;
+		buffer = (char*)realloc(buffer, size);
+
+		strcat_s(buffer, size, bindcfgstring);
+	}
+	free(bindcfgstring);
 
 	FileWrite("config.cfg", buffer);
 	ConsolePrint("Config variables saved\n");

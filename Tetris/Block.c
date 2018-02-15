@@ -125,7 +125,7 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 	BlockDataFlipColumns(blocktypes[last].data, blocktypes[last].size);
 }
 
-void SVClearBlocks(const char **tokens, unsigned int count) {
+void ClearBlocks() {
 	free(blocktypes);
 	blocktypes = NULL;
 	type_count = 0;

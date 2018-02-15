@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "Dvar.h"
 #include "Globals.h"
+#include "InputManager.h"
 #include "Resource.h"
 #include "String.h"
 #include <CommCtrl.h>
@@ -68,7 +69,9 @@ LRESULT CALLBACK ConsoleEditProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 
 	case WM_KEYDOWN:
 		switch (wparam) {
-		case VK_OEM_3: break;
+		case VK_OEM_3: 
+			DestroyWindow(hwnd_console); 
+			break;
 
 		case VK_RETURN:
 			if (hwnd == hwnd_console_input) {
@@ -79,11 +82,6 @@ LRESULT CALLBACK ConsoleEditProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 			}
 			break;
 		}
-		break;
-
-	case WM_KEYUP:
-		if (wparam == VK_OEM_3)
-			DestroyWindow(hwnd_console);
 		break;
 
 
@@ -181,7 +179,8 @@ void ConsolePrint(const char *string) {
 	SetWindowTextA(hwnd_console_text, console_buffer);
 }
 
-DFunc Console_Clear, Console_Exit, Console_List, Console_Run, Console_Save;
+void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
+DFunc Console_Run;
 
 void ConsoleInit() {
 	ConsoleResetBuffer();
@@ -214,42 +213,42 @@ void ConsoleInit() {
 	////
 	//
 	////
-	AddDFunction(	"clear",					Console_Clear);
-	AddDFunction(	"exit",						Console_Exit);
-	AddDFunction(	"list",						Console_List);
 	AddDFunction(	"run",						Console_Run);
-	AddDFunction(	"save",						Console_Save);
+	AddDCall(		"clear",					Console_Clear);
+	AddDCall(		"exit",						Console_Exit);
+	AddDCall(		"list",						Console_List);
+	AddDCall(		"save",						Console_Save);
+
+	AddDFunction(	"bind",						Bind);
+	AddDFunction(	"bindaxis",					BindAxis);
+	AddDCall(		"clear_binds",				ClearBinds);
 
 	AddDFunction(	"sv_blocks_add",			SVAddBlock);
-	AddDFunction(	"sv_blocks_clear",			SVClearBlocks);
-
+	AddDCall(		"sv_blocks_clear",			ClearBlocks);
 	AddDFloat(		"sv_board_width",			10);
 	AddDFloat(		"sv_board_height",			20);
-	AddDFloat(		"sv_gravity",				0);
 
-	AddDStringC(	"cl_font_texture",			"",	C_FontTexture);
-	AddDFloatC(		"cl_fontid_size",			0, C_FontIDSize);
-
-	AddDStringC(	"cl_menu_font_texture",		"", C_MenuFontTexture);
-	AddDFloatC(		"cl_menu_fontid_size",		0, C_MenuFontIDSize);
-
+	AddDStringC(	"cl_font_texture",			"",	C_CLFontTexture);
+	AddDFloatC(		"cl_fontid_size",			0, C_CLFontIDSize);
+	AddDStringC(	"cl_menu_font_texture",		"", C_CLMenuFontTexture);
+	AddDFloatC(		"cl_menu_fontid_size",		0, C_CLMenuFontIDSize);
 	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture);
-	AddDFloatC(		"cl_texid_size",			0, C_CLBlockIDSize);
-	AddDFunction(	"cl_texid_order",			CLSetTextureIndexOrder);
-	AddDFunction(	"cl_texids_add",			CLAddTextureLevel);
-	AddDFunction(	"cl_texids_clear",			CLClearTextureLevels);
+	AddDFloatC(		"cl_blockid_size",			0, C_CLBlockIDSize);
+	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder);
+	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel);
+	AddDCall(		"cl_blockids_clear",		ClearTextureLevels);
 }
 
-void Console_Clear(const char **tokens, unsigned int count) {
+void Console_Clear() {
 	ConsoleResetBuffer();
 	SetWindowTextA(hwnd_console_text, console_buffer);
 }
 
-void Console_Exit(const char **tokens, unsigned int count) {
+void Console_Exit() {
 	g_running = false;
 }
 
-void Console_List(const char **tokens, unsigned int count) {
+void Console_List() {
 	ConsolePrint("\nDynamic variables:\n");
 	ListDvars();
 }
@@ -262,7 +261,7 @@ void Console_Run(const char **tokens, unsigned int count) {
 		ConsolePrint("File not found\n");
 }
 
-void Console_Save(const char **tokens, unsigned int count) {
+void Console_Save() {
 	SaveCvars();
 }
 

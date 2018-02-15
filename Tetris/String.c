@@ -119,3 +119,14 @@ char* SeperateDir(const char *filepath) {
 
 	return dir;
 }
+
+void CutExt(char *str) {
+	char* lastdot = NULL;
+
+	for (char *c = str; *c != '\0'; ++c)
+		if (*c == '.')
+			lastdot = c;
+
+	if (lastdot)
+		*lastdot = '\0';
+}

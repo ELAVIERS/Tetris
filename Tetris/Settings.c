@@ -16,17 +16,6 @@ HWND hwnd_setting_font_texture;
 char **texture_config_filepaths = NULL;
 unsigned int texture_config_count = 0;
 
-inline void CutEXT(char *str) {
-	char* lastdot = NULL;
-
-	for (char *c = str; *c != '\0'; ++c)
-		if (*c == '.')
-			lastdot = c;
-
-	if (lastdot)
-		*lastdot = '\0';
-}
-
 inline void AddComboBoxEntries() {
 	char **dirs;
 	unsigned int dircount = FindFilesInDirectory("textures/*", &dirs, FILE_ATTRIBUTE_DIRECTORY);
@@ -55,7 +44,7 @@ inline void AddComboBoxEntries() {
 			strcat_s(path, MAX_PATH, filenames[j]);
 			texture_config_filepaths[texture_config_count++] = DupString(path);
 
-			CutEXT(filenames[j]);
+			CutExt(filenames[j]);
 			SendMessage(hwnd_setting_font_texture, CB_ADDSTRING, 0, (LPARAM)filenames[j]);
 
 			free(filenames[j]);
@@ -96,7 +85,7 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	case WM_COMMAND:
 		if (HIWORD(wparam) == CBN_SELCHANGE) {
 			int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
-			SetDString(GetDvar("cfg_texture"), texture_config_filepaths[index]);
+			SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index]);
 
 			SaveCvars();
 		}

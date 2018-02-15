@@ -16,3 +16,4 @@ unsigned int SplitTokens(const char *string, char ***out_tokens);
 void FreeTokens(char **tokens, unsigned int count);
 
 char* SeperateDir(const char *filepath);
+void CutExt(char *str);

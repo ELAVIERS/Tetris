@@ -17,11 +17,3 @@ void G_Free() {
 	glDeleteTextures(1, &g_tex_font.glid);
 	glDeleteTextures(1, &g_tex_menu_font.glid);
 }
-
-void TEMP_UpdateBoardSize() {
-	if (g_board) {
-		g_board->height = g_height;
-		g_board->width = g_board->height / g_board->rows * g_board->columns;
-		g_board->x = g_width / 2 - g_board->width / 2;
-	}
-}

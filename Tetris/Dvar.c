@@ -1,16 +1,8 @@
 #include "Dvar.h"
-
 #include "Console.h"
 #include "String.h"
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct Dvar_s {
-	char *name;
-	DvarType type;
-	DvarValue data;
-	DvarCallbackPtr callback;
-} Dvar;
 
 typedef struct DvarNode_s {
 	char key;
@@ -42,6 +34,17 @@ void AddDvarNode(DvarNode* node, Dvar *dvar, unsigned int depth) {
 	if (dvar->name[depth] == '\0')
 		return;
 
+	if (dvar->name[depth] < node->key) {
+		DvarNode *copy = (DvarNode*)malloc(sizeof(DvarNode));
+		memcpy_s(copy, sizeof(DvarNode), node, sizeof(DvarNode));
+
+		node->key = dvar->name[depth];
+		node->next = copy;
+		node->dvar = NULL;
+		node->child = NewDvarNode(dvar, depth + 1);
+		return;
+	}
+
 	while (1) {
 		if (dvar->name[depth] == node->key) {
 			if (node->child) {
@@ -59,7 +62,7 @@ void AddDvarNode(DvarNode* node, Dvar *dvar, unsigned int depth) {
 		}
 
 		if (dvar->name[depth] < node->next->key) {
-			DvarNode* next_old = node->next;
+			DvarNode *next_old = node->next;
 			node->next = NewDvarNode(dvar, depth);
 			node->next->next = next_old;
 			return;
@@ -97,7 +100,7 @@ void FreeNode(DvarNode *node) {
 			free(node->dvar->name);
 
 			if (node->dvar->type == DVT_STRING)
-				free(node->dvar->data.dstring);
+				free(node->dvar->value.string);
 
 			free(node->dvar);
 		}
@@ -112,11 +115,14 @@ void ListNodes(DvarNode *node) {
 	for (; node; node = node->next) {
 		if (node->dvar) {
 			switch (node->dvar->type) {
-			case DVT_FLOAT:
-				ConsolePrint("FLOAT\t");
+			case DVT_CALL:
+				ConsolePrint("CALL\t");
 				break;
 			case DVT_FUNCTION:
 				ConsolePrint("FUNC\t");
+				break;
+			case DVT_FLOAT:
+				ConsolePrint("FLOAT\t");
 				break;
 			case DVT_STRING:
 				ConsolePrint("STRING\t");
@@ -141,14 +147,14 @@ void PrintValue(Dvar* dvar) {
 	switch (dvar->type) {
 	case DVT_FLOAT:
 	{
-		char *str = FloatToString(dvar->data.dfloat);
+		char *str = FloatToString(dvar->value.number);
 		ConsolePrint(str);
 		free(str);
 	}
 	break;
 	case DVT_STRING:
 		ConsolePrint("\"");
-		ConsolePrint(dvar->data.dstring);
+		ConsolePrint(dvar->value.string);
 		ConsolePrint("\"");
 		break;
 	}
@@ -160,7 +166,7 @@ void PrintValue(Dvar* dvar) {
 
 DvarNode *dvar_root = NULL;
 
-inline Dvar* FindDvar(const char *name) {
+Dvar* GetDvar(const char *name) {
 	DvarNode *node = FindDvarNode(dvar_root, name, 0);
 	if (!node)
 		return NULL;
@@ -168,9 +174,9 @@ inline Dvar* FindDvar(const char *name) {
 	return node->dvar;
 }
 
-void AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallbackPtr callback) {
-	if (dvar_root && FindDvar(name))
-		return;
+Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *callback) {
+	if (dvar_root && GetDvar(name))
+		return NULL;
 
 	Dvar *dvar = (Dvar*)malloc(sizeof(Dvar));
 	dvar->name = DupString(name);
@@ -178,61 +184,42 @@ void AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallbackPtr 
 	dvar->callback = callback;
 	
 	if (type == DVT_STRING)
-		dvar->data.dstring = DupString(value.dstring);
+		dvar->value.string = DupString(value.string);
 	else
-		dvar->data = value;
+		dvar->value = value;
 
 
 	if (dvar_root)
 		AddDvarNode(dvar_root, dvar, 0);
 	else
 		dvar_root = NewDvarNode(dvar, 0);
+
+	return dvar;
 }
 
-void SetDvar(HDvar hdvar, DvarValue value) {
-	Dvar *dvar = (Dvar*)hdvar;
-
+void SetDvar(Dvar *dvar, DvarValue value) {
 	if (dvar->type == DVT_STRING) {
-		free(dvar->data.dstring);
-		dvar->data.dstring = DupString(value.dstring);
+		free(dvar->value.string);
+		dvar->value.string = DupString(value.string);
 	}
 	else
-		dvar->data = value;
+		dvar->value = value;
 
 	if (dvar->callback)
-		dvar->callback(dvar->data);
+		dvar->callback(dvar->value);
 
 	PrintValue(dvar);
 }
 
-HDvar GetDvar(const char *name) {
-	return FindDvar(name);
-}
-
-const char* HDvarName(HDvar hdvar) {
-	return ((Dvar*)hdvar)->name;
-}
-
-char* HDvarValueAsString(HDvar hdvar) {
-	Dvar *dvar = (Dvar*)hdvar;
-
+char* DvarAllocValueString(const Dvar  *dvar) {
 	switch (dvar->type) {
 	case DVT_STRING:
-		return DupString(dvar->data.dstring);
+		return DupString(dvar->value.string);
 	case DVT_FLOAT:
-		return FloatToString(dvar->data.dfloat);
+		return FloatToString(dvar->value.number);
 	}
 
 	return NULL;
-}
-
-float HDFloatValue(HDvar hdvar) {
-	Dvar *dvar = (Dvar*)hdvar;
-
-	if (dvar->type == DVT_FLOAT)
-		return dvar->data.dfloat;
-
-	return 0;
 }
 
 void ListDvars() {
@@ -246,45 +233,51 @@ void FreeDvars() {
 
 ////////////////
 
-void HandleCommand(const char **tokens, unsigned int count) {
-	if (count == 0)
-		return;
-
-	Dvar *dvar = FindDvar(tokens[0]);
-	if (!dvar) {
-		ConsolePrint(tokens[0]);
-		ConsolePrint(" is not a variable\n");
-		return;
-	}
-
-	if (dvar->type == DVT_FUNCTION) {
+void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count) {
+	if (dvar->type == DVT_CALL) {
 		ConsolePrint(dvar->name);
-		ConsolePrint("(");
-		for (unsigned int i = 0; i < count - 1; ++i) {
-			ConsolePrint(tokens[i + 1]);
-			if (i < count - 2)
-				ConsolePrint(", ");
-		}
-		ConsolePrint(")\n");
-
-		dvar->data.dfunc(tokens + 1, count - 1);
+		ConsolePrint("()\n");
+		dvar->value.call();
 		return;
 	}
 
-	if (count > 1) {
+	if (count > 0) {
 		switch (dvar->type) {
+		case DVT_FUNCTION:
+			ConsolePrint(dvar->name);
+			ConsolePrint("(");
+			for (unsigned int i = 0; i < count; ++i) {
+				ConsolePrint(tokens[i]);
+				if (i < count - 1)
+					ConsolePrint(", ");
+			}
+			ConsolePrint(")\n");
+
+			dvar->value.function(tokens, count);
+			return;
 		case DVT_FLOAT:
-			dvar->data.dfloat = (DFloat)atof(tokens[1]);
+			dvar->value.number = (float)atof(tokens[0]);
 			break;
 		case DVT_STRING:
-			free(dvar->data.dstring);
-			dvar->data.dstring = DupString(tokens[1]);
+			free(dvar->value.string);
+			dvar->value.string = DupString(tokens[0]);
 			break;
 		}
 	}
 
 	PrintValue(dvar);
 
-	if (count > 1 && dvar->callback)
-		dvar->callback(dvar->data);
+	if (count > 0 && dvar->callback)
+		dvar->callback(dvar->value);
+}
+
+void HandleCommand(const char **tokens, unsigned int count) {
+	if (count == 0) return;
+
+	Dvar *dvar = GetDvar(tokens[0]);
+	if (!dvar) {
+		ConsolePrint(tokens[0]);
+		ConsolePrint(" is not a variable\n");
+	}
+	else DvarCommand(dvar, tokens + 1, count - 1);
 }
