@@ -33,6 +33,8 @@ unsigned int FindFilesInDirectory(const char *filepath, char ***out_files, DWORD
 	return file_count;
 }
 
+VOID CALLBACK CallbackThatWindowsWantsElseEverythingGoesMental(__in  DWORD dwErrorCode, __in  DWORD dwNumberOfBytesTransfered, __in  LPOVERLAPPED lpOverlapped) {}
+
 unsigned int FileRead(const char *filepath, char **buffer_out) {
 	HANDLE file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (!file)
@@ -45,7 +47,7 @@ unsigned int FileRead(const char *filepath, char **buffer_out) {
 	char *buffer = malloc(file_len.LowPart + 1);
 	
 	OVERLAPPED ovl = {0};
-	ReadFileEx(file, buffer, file_len.LowPart, &ovl, NULL);
+	ReadFileEx(file, buffer, file_len.LowPart, &ovl, CallbackThatWindowsWantsElseEverythingGoesMental);
 	buffer[file_len.LowPart] = '\0';
 
 	CloseHandle(file);

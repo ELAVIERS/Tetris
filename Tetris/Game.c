@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Globals.h"
 #include "Menu.h"
+#include "Networking.h"
 #include "Resource.h"
 #include "Shader.h"
 #include "Timing.h"
@@ -20,7 +21,7 @@ float *sv_gravity, *sv_drop_gravity, *sv_autorepeat_delay, *sv_autorepeat;
 
 float *axis_x, *axis_down;
 
-void GameInputDrop(), GameInputCCW(), GameInputCW();
+void GameInputDrop(), GameInputCCW(), GameInputCW(), C_CLBlockIDSize(DvarValue);
 
 void GameInit() {
 	HINSTANCE instance = GetModuleHandle(NULL);
@@ -39,8 +40,8 @@ void GameInit() {
 
 	sv_gravity =			&AddDFloat("sv_gravity", 0.5f)->value.number;
 	sv_drop_gravity =		&AddDFloat("sv_drop_gravity", 0.05f)->value.number;
-	sv_autorepeat_delay =	&AddDFloat("sv_autorepeat_delay", 0.25f)->value.number;
 	sv_autorepeat =			&AddDFloat("sv_autorepeat", 0.05f)->value.number;
+	sv_autorepeat_delay =	&AddDFloat("sv_autorepeat_delay", 0.25f)->value.number;
 
 	axis_x =	&AddDFloat("axis_x", 0)->value.number;
 	axis_down = &AddDFloat("axis_down", 0)->value.number;
@@ -49,6 +50,8 @@ void GameInit() {
 	AddDCall("rotate_ccw",	GameInputCCW);
 
 	AddDCall("dbg_next_texture_level", UseNextTextureLevel);
+
+	AddDFloatC("cl_blockid_size", 0, C_CLBlockIDSize);
 }
 
 void GameFrame() {
@@ -63,7 +66,7 @@ void GameFrame() {
 	snprintf(title, title_size, "Tetris (%d FPS)", (int)(1.f / g_delta));
 	SetWindowTextA(g_hwnd, title);
 
-	if (board_count) {
+	if (board_count && !g_paused) {
 		drop_timer += g_delta;
 
 		if (*axis_down) {
@@ -88,7 +91,7 @@ void GameFrame() {
 		if (axis_x_prev) {
 			das_timer += g_delta;
 			if (das_timer >= *sv_autorepeat) {
-				das_timer = 0.f;
+				das_timer -= *sv_autorepeat;
 				BoardInputX(boards + 0, (int)axis_x_prev);
 			}
 		}
@@ -118,25 +121,51 @@ void GameRender() {
 	SwapBuffers(g_devcontext);
 }
 
+/////////
+
+inline void GameSetBoardIDSize(float id_size) {
+	for (unsigned int i = 0; i < board_count; ++i)
+		BoardSetIDSize(boards + i, id_size);
+}
+
+void C_CLBlockIDSize(DvarValue number) {
+	GameSetBoardIDSize(number.number);
+}
+
 void GameBegin(int playercount) {
-	g_menu_active = false;
+	if (g_ingame)
+		GameEnd();
 
 	board_count = playercount;
 	boards = (Board*)malloc(board_count * sizeof(Board));
 
-	byte rows = (byte)GetDvar("sv_board_height")->value.number;
-	byte columns = (byte)GetDvar("sv_board_width")->value.number;
+	unsigned short rows = (unsigned short)GetDvar("sv_board_height")->value.number;
+	unsigned short columns = (unsigned short)GetDvar("sv_board_width")->value.number;
+	float id_size = GetDvar("cl_blockid_size")->value.number;
 
 	for (unsigned int i = 0; i < board_count; ++i) {
 		boards[i].rows = rows;
 		boards[i].columns = columns;
 
-		SetupBoard(boards + i);
+		BoardCreate(boards + i);
+		BoardNewGame(boards + i);
+		BoardSetIDSize(boards + i, id_size);
 	}
 
 	RECT size;
 	GetClientRect(g_hwnd, &size);
 	GameSizeUpdate((unsigned short)size.right, (unsigned short)size.bottom);
+
+	g_ingame = true;
+}
+
+void GameRestart() {
+	//for (unsigned int i = 0; i < board_count; ++i)
+	//	BoardNewGame(boards + i);
+
+	unsigned int prev_board_count = board_count;
+	GameEnd();
+	GameBegin(prev_board_count);
 }
 
 void GameEnd() {
@@ -146,16 +175,39 @@ void GameEnd() {
 	free(boards);
 	board_count = 0;
 
-	CreateMainMenu();
-	g_menu_active = true;
+	g_ingame = false;
 }
 
+inline unsigned short BoardWidth(const Board *board, unsigned short h) { return (unsigned short)((float)h / (float)board->rows) * board->columns; }
+
 void GameSizeUpdate(unsigned short w, unsigned short h) {
-	for (unsigned int i = 0; i < board_count; ++i) {
-		boards[i].height = h;
-		boards[i].width = h / boards[i].rows * boards[i].columns;
-		boards[i].x = ((i + 1) * w / (board_count + 1)) - (boards[i].width / 2);
-		boards[i].y = 0;
+	if (board_count == 0)
+		return;
+
+	if (board_count == 1) {
+		boards[0].height = h;
+		boards[0].width = BoardWidth(boards, h);
+		boards[0].x = (w / 2) - (boards[0].width / 2);
+		boards[0].y = 0;
+	}
+	else {
+		int gap, start_x;
+
+		for (unsigned int i = 0; i < board_count; ++i) {
+			boards[i].height = h;
+			boards[i].width = BoardWidth(boards + i, h);
+			boards[i].y = 0;
+
+			if (i == 0) {
+				boards[i].x = 0;
+				gap = (w - (boards[0].width / 2) - (BoardWidth(boards + board_count - 1, h)) / 2) / (board_count - 1);
+				start_x = boards[0].width / 2;
+			}
+			else if (i == board_count - 1)
+				boards[i].x = w - boards[i].width;
+			else
+				boards[i].x = start_x + (gap * i) - (boards[i].width / 2);
+		}
 	}
 }
 

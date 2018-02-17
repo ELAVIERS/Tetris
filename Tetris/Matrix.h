@@ -1,8 +1,13 @@
 #pragma once
+
+/*
+	Matrix.h
+
+	Matrix operations for OpenGL
+*/
+
 typedef float Mat3[3][3];
 
-float** Mat3Alloc();
-void Mat3Free(float **p);
 void Mat3Multiply(Mat3 a, const Mat3 b);
 
 void Mat3Identity(Mat3 out);

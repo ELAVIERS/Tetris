@@ -18,6 +18,8 @@ typedef struct {
 
 	Mat3 transform;
 	unsigned int selected;
+
+	bool closable;
 } Menu;
 
 void Menu_Zero(Menu *menu) {
@@ -25,6 +27,7 @@ void Menu_Zero(Menu *menu) {
 	menu->item_count = 0;
 	menu->selected = 0;
 	Mat3Identity(menu->transform);
+	menu->closable = false;
 }
 
 void Menu_AddItem(Menu *menu, const char *text, void (*callback)()) {
@@ -46,11 +49,12 @@ void Menu_Select(Menu *menu) {
 }
 
 void Menu_ChangeSelection(Menu *menu, int amount) {
-	menu->selected += amount;
+	int selection = menu->selected + amount;
 
-	while (menu->selected < 0)
-		menu->selected += menu->item_count;
+	while (selection < 0)
+		selection += menu->item_count;
 
+	menu->selected = selection;
 	menu->selected %= menu->item_count;
 }
 
@@ -62,6 +66,7 @@ void Menu_Free(Menu* menu) {
 	}
 
 	free(menu->items);
+	menu->items = NULL;
 	menu->item_count = 0;
 }
 
@@ -89,27 +94,43 @@ void Menu_Render(const Menu* menu) {
 #include "IO.h"
 #include "Settings.h"
 
-typedef void Callback();
-
 #define MENU_COUNT 2
 Menu menus[MENU_COUNT];
-Menu *m_main = menus + 0;
-Menu *m_play = menus + 1;
-unsigned int active_menu = 0;
+Menu *menuslot1 = menus + 0;
+Menu *menuslot2 = menus + 1;
 
-Callback play_startgame;
+void MenuInit() {
+	Menu_Zero(menuslot1);
+	Menu_Zero(menuslot2);
+
+	Mat3Translate(menuslot2->transform, 288, 0);
+}
+
+unsigned int active_menu = 0;
 
 char **modepaths;
 unsigned int mode_count;
 
-void CreateMenu_Play() {
-	active_menu = (unsigned int)(m_play - menus);
-	Menu_Zero(m_play);
-	Mat3Translate(m_play->transform, 288, 0);
+void play_startgame() {
+	RunConfig(modepaths[menuslot2->selected]);
+
+	FreeTokens(modepaths, mode_count);
+	Menu_Free(menuslot1);
+	Menu_Free(menuslot2);
+
+	GameBegin(4);
+
+	g_paused = false;
+}
+
+void CreateMenuSecondary_Play() {
+	active_menu = 1;
+	menuslot2->selected = 0;
+	menuslot2->closable = true;
 
 	char **filenames;
-	mode_count = FindFilesInDirectory("Modes/*.cfg", &filenames, 0xFFFFFFFF);
-	
+	mode_count = FindFilesInDirectory("Modes/*.cfg", &filenames, FILTER_NONE);
+
 	if (mode_count) {
 		modepaths = (char**)malloc(mode_count * sizeof(char*));
 
@@ -119,7 +140,7 @@ void CreateMenu_Play() {
 			strcat_s(modepaths[i], MAX_PATH, filenames[i]);
 
 			CutExt(filenames[i]);
-			Menu_AddItem(m_play, filenames[i], play_startgame);
+			Menu_AddItem(menuslot2, filenames[i], play_startgame);
 
 			free(filenames[i]);
 		}
@@ -128,18 +149,12 @@ void CreateMenu_Play() {
 	}
 }
 
-void play_startgame() {
-	RunConfig(modepaths[m_play->selected]);
-
-	FreeTokens(modepaths, mode_count);
-	Menu_Free(m_play);
-	Menu_Free(m_main);
-
-	GameBegin(1);
+void main_play() {
+	CreateMenuSecondary_Play();
 }
 
-void main_play() {
-	CreateMenu_Play();
+void main_connect() {
+	MessageBox(NULL, "Ha! You wish!", "lol no", MB_OK);
 }
 
 void main_settings() {
@@ -150,15 +165,53 @@ void main_quit() {
 	g_running = false;
 }
 
-//Publicly available functions here
+void pause_restart() {
+	GameRestart();
 
-void CreateMainMenu() {
-	active_menu = (unsigned int)(m_main - menus);
-	Menu_Zero(m_main);
+	ActiveMenu_Close();
+}
 
-	Menu_AddItem(m_main, "PLAY", main_play);
-	Menu_AddItem(m_main, "SETTINGS", main_settings);
-	Menu_AddItem(m_main, "EXIT", main_quit);
+void pause_endgame() {
+	Menu_Free(menuslot1);
+
+	GameEnd();
+}
+
+void CreateMenu_Main() {
+	active_menu = 0;
+	menuslot1->selected = 0;
+	menuslot1->closable = false;
+
+	Menu_AddItem(menuslot1, "PLAY", main_play);
+	Menu_AddItem(menuslot1, "CONNECT", main_connect);
+	Menu_AddItem(menuslot1, "SETTINGS", main_settings);
+	Menu_AddItem(menuslot1, "EXIT", main_quit);
+
+	g_paused = true;
+}
+
+void CreateMenu_Pause() {
+	active_menu = 0;
+	menuslot1->selected = 0;
+	menuslot1->closable = true;
+
+	Menu_AddItem(menuslot1, "RESTART", pause_restart);
+	Menu_AddItem(menuslot1, "MODE", main_play);
+	Menu_AddItem(menuslot1, "SETTINGS", main_settings);
+	Menu_AddItem(menuslot1, "MENU", pause_endgame);
+	Menu_AddItem(menuslot1, "EXIT", main_quit);
+
+	g_paused = true;
+}
+
+void ActiveMenu_Close() {
+	if (menus[active_menu].closable) {
+		Menu_Free(menus + active_menu);
+
+		if (active_menu == 0)
+			g_paused = false;
+		else --active_menu;
+	}
 }
 
 void ActiveMenu_ChangeSelection(int amount) {

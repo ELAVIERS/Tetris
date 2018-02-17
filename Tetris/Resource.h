@@ -15,4 +15,5 @@
 
 #include <Windows.h>
 
+//Gets a string from resource
 char *LoadStringResource(HINSTANCE instance, int id);

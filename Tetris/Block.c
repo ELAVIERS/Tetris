@@ -67,7 +67,7 @@ void BlockRotateCW(Block *block) {
 	BlockDataFlipColumns(block->data, block->size);
 }
 
-void RenderBlock(const Block *block, float x_offset, float y_offset, float block_w, float block_h) {
+void RenderBlock(const Block *block, const Quad *quad, float x_offset, float y_offset, float block_w, float block_h) {
 	if (!blocktypes)
 		return;
 
@@ -81,12 +81,12 @@ void RenderBlock(const Block *block, float x_offset, float y_offset, float block
 			Mat3Scale(transform, block_w, block_h);
 			ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
 
-			QuadRender();
+			QuadRender(quad);
 		};
 	}
 }
 
-void UseNextBlock(Block *block, unsigned short top) {
+void BlockSetRandom(Block *block, unsigned short top) {
 	BlockData *new_block = &blocktypes[(unsigned int)(((float)rand() / (float)(RAND_MAX + 1)) * type_count)];
 
 	unsigned int sizesq = SQUARE(new_block->size);

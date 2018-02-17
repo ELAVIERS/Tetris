@@ -7,5 +7,8 @@
 */
 
 void TimerInit();
+
 void TimerStart();
+
+//Returns amount of seconds since TimerStart was called
 float TimerDelta();

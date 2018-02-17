@@ -157,7 +157,6 @@ void ClearBinds() {
 }
 
 #include "Console.h"
-#include "Game.h"
 #include "Globals.h"
 #include "Menu.h"
 #include "Window.h"
@@ -168,9 +167,9 @@ void KeyDown(WORD vk) {
 	case VK_F11: FullscreenToggle(); return;
 	}
 
-	if (!g_menu_active) {
-		if (vk == VK_ESCAPE) {
-			GameEnd();
+	if (!g_paused) {
+		if (vk == VK_ESCAPE && g_ingame) {
+			CreateMenu_Pause();
 			return;
 		}
 
@@ -187,6 +186,10 @@ void KeyDown(WORD vk) {
 	}
 	else {
 		switch (vk) {
+		case VK_ESCAPE:
+			ActiveMenu_Close();
+			break;
+
 		case VK_UP:
 			ActiveMenu_ChangeSelection(1);
 			break;
@@ -201,7 +204,7 @@ void KeyDown(WORD vk) {
 }
 
 void KeyUp(WORD vk) {
-	if (!g_menu_active)
+	if (!g_paused)
 		for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
 			if (bind->key == vk && bind->data.type == BIND_AXIS)
 				SetDvarFloat(bind->dvar, bind->dvar->value.number - bind->data.axisvalue);

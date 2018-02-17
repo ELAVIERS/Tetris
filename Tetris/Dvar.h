@@ -17,6 +17,14 @@ typedef union DvarValue_u {
 	char*	string;
 } DvarValue;
 
+/*
+	Dvar(struct)
+
+	name		the name of the variable
+	value		the value of the variable
+	type		specifies what type of data value holds
+	callback	function to call when value is changed
+*/
 typedef struct Dvar_s {
 	char *name;
 	DvarType type;

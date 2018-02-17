@@ -6,11 +6,19 @@
 #include <stdbool.h>
 #include <Windows.h>
 
+/*
+	Globals.h
+
+	Global variables
+*/
+
 HWND			g_hwnd;
 HDC				g_devcontext;
 
 bool			g_running;
-bool			g_menu_active;
+
+bool			g_ingame;
+bool			g_paused;
 
 float			g_delta;
 

@@ -28,26 +28,39 @@ typedef struct TextureLevel_s {
 TextureLevel *current_level;
 
 inline void BoardUseNextBlock(Board *board) {
-	UseNextBlock(&board->block, board->rows - 1);
+	BlockSetRandom(&board->block, board->rows - 1);
 }
 
-void SetupBoard(Board* board) {
+void BoardCreate(Board *board) {
 	board->data = (char**)malloc(board->rows * sizeof(char*));
 	for (byte i = 0; i < board->rows; ++i)
 		board->data[i] = (char*)calloc(board->columns, sizeof(char));
 
-	float texidsize = GetDvar("cl_blockid_size")->value.number;
-	QuadInit(texidsize / (float)tex_blocks.width, texidsize / (float)tex_blocks.height);
-
-	BoardUseNextBlock(board);
+	QuadCreate(&board->quad_blocks);
 }
 
-void BoardFree(const Board *board) {
+void BoardFree(Board *board) {
+	QuadDelete(&board->quad_blocks);
+
 	for (byte i = 0; i < board->rows; ++i)
 		free(board->data[i]);
 
 	free(board->data);
 	free(board->block.data);
+}
+
+void BoardNewGame(Board *board) {
+	for (byte i = 0; i < board->rows; ++i)
+		ZeroMemory(board->data[i], board->columns);
+
+	BoardUseNextBlock(board);
+}
+
+void BoardSetIDSize(Board *board, float id_size) {
+	QuadSetData(&board->quad_blocks, id_size / (float)tex_blocks.width, id_size / (float)tex_blocks.height);
+
+	tex_blocks_divx = tex_blocks.width / (unsigned short)id_size;
+	tex_blocks_divy = tex_blocks.height / (unsigned short)id_size;
 }
 
 inline void ClearRow(Board *board, unsigned int row) {
@@ -112,9 +125,16 @@ short TextureLevelIDIndex(char id) {
 }
 
 void BoardRender(const Board *board) {
-	glBindTexture(GL_TEXTURE_2D, tex_blocks.glid);
-
 	Mat3 transform;
+	//
+	glBindTexture(GL_TEXTURE_2D, 0);
+	Mat3Identity(transform);
+	Mat3Scale(transform, board->width, board->height);
+	Mat3Translate(transform, board->x, board->y);
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	QuadRender(&board->quad_blocks);
+
+	glBindTexture(GL_TEXTURE_2D, tex_blocks.glid);
 
 	float block_w = (float)(int)((float)board->width / (float)board->columns);
 	float block_h = (float)(int)((float)board->height / (float)board->rows);
@@ -131,15 +151,16 @@ void BoardRender(const Board *board) {
 				glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"), 
 					(float)(index % tex_blocks_divx) / (float)tex_blocks_divx, (float)(index / tex_blocks_divx) / (float)tex_blocks_divy);
 
-				QuadRender();
+				QuadRender(&board->quad_blocks);
 			};
 		}
 
+	//
 	short index = TextureLevelIDIndex(board->block.id);
 	glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"),
 		(float)(index % tex_blocks_divx) / (float)tex_blocks_divx, (float)(index / tex_blocks_divx) / (float)tex_blocks_divy);
 
-	RenderBlock(&board->block, board->x, board->y, block_w, block_h);
+	RenderBlock(&board->block, &board->quad_blocks, board->x, board->y, block_w, block_h);
 }
 
 //Input
@@ -179,7 +200,7 @@ void BoardInputCW(Board *board) {
 ////
 
 char **id_groups;
-unsigned int group_count;
+unsigned int group_count = 0;
 unsigned int blockid_count;
 
 TextureLevel *first_level;
@@ -191,6 +212,8 @@ void UseNextTextureLevel() {
 }
 
 void CLSetTextureIndexOrder(const char **tokens, unsigned int count) {
+	FreeTokens(id_groups, group_count);
+
 	id_groups = (char**)malloc(count * sizeof(char*));
 
 	blockid_count = 0;
@@ -248,9 +271,4 @@ void ClearTextureLevels() {
 
 void C_CLBlockTexture(DvarValue string) {
 	TextureFromFile(string.string, &tex_blocks);
-}
-
-void C_CLBlockIDSize(DvarValue number) {
-	tex_blocks_divx = tex_blocks.width / (unsigned short)number.number;
-	tex_blocks_divy = tex_blocks.height / (unsigned short)number.number;
 }

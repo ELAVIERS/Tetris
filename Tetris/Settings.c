@@ -36,7 +36,7 @@ inline void AddComboBoxEntries() {
 		strcat_s(path, MAX_PATH, "/*.cfg");
 
 		char **filenames;
-		unsigned int filecount = FindFilesInDirectory(path, &filenames, 0xFFFFFFFF);
+		unsigned int filecount = FindFilesInDirectory(path, &filenames, FILTER_NONE);
 		texture_config_filepaths = (char**)realloc(texture_config_filepaths, (texture_config_count + filecount) * sizeof(char*));
 
 		for (unsigned int j = 0; j < filecount; ++j) {

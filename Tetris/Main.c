@@ -3,13 +3,17 @@
 #include "Game.h"
 #include "Globals.h"
 #include "Menu.h"
+#include "Networking.h"
 #include "Settings.h"
 #include "Timing.h"
 #include "Window.h"
 #include <CommCtrl.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
+#include <stdlib.h>
 #include <Windows.h>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 
 /*
 	Main.c
@@ -42,11 +46,15 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	SettingsInit();
 	TimerInit();
 
+	NetworkingInit();
 	GameInit();
-
+	MenuInit();
+	
 	ConsolePrint("Running config.cfg...\n");
 	RunConfig("config.cfg");
 	ConsolePrint("Done!\n");
+
+	NetworkingCreateSocket();
 
 	//
 	//Seed RNG
@@ -59,10 +67,9 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//Start Game
 	//Show the window, run message loop, and call frames 
 	//
-	CreateMainMenu();
+	CreateMenu_Main();
 	ShowWindow(g_hwnd, cmd_show);
 	g_running = true;
-	g_menu_active = true;
 
 	MSG msg;
 	while (g_running) {

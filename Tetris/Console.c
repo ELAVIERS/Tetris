@@ -155,28 +155,33 @@ inline unsigned int CountNewLines(const char* str) {
 }
 
 void CopyString_TOCRLF(char *dest, size_t max, const char *src) {
-	unsigned int start = 0;
-	while (dest[start] != '\0')
-		++start;
+	unsigned int newlines = 0;
 
-	for (size_t i = 0; start + i < max; ++i) {
+	for (size_t i = 0; newlines + i < max; ++i) {
 		//Make line endings CRLF, of course... that's why I wrote this dumb function after all. I am not writing \r\n everytime I want a new line, Windows.
 		if (src[i] == '\n') {
-			dest[start + i] = '\r';
-			++start;
+			dest[newlines + i] = '\r';
+			++newlines;
 		}
 
-		dest[start + i] = src[i];
+		dest[newlines + i] = src[i];
 
 		if (src[i] == '\0') break;
 	}
 }
 
 void ConsolePrint(const char *string) {
-	console_buffer_size += strlen(string) + CountNewLines(string);
+	size_t string_length = strlen(string) + CountNewLines(string);
+	console_buffer_size += string_length;
 	console_buffer = (char*)realloc(console_buffer, console_buffer_size);
-	CopyString_TOCRLF(console_buffer, console_buffer_size, string);
-	SetWindowTextA(hwnd_console_text, console_buffer);
+
+	char *crlf_str = (char*)malloc(string_length + 1);
+	CopyString_TOCRLF(crlf_str, string_length + 1, string);
+	strcat_s(console_buffer, console_buffer_size, crlf_str);
+
+	SendMessageA(hwnd_console_text, EM_SETSEL, 0, -1);						//Select all text
+	SendMessageA(hwnd_console_text, EM_SETSEL, -1, -1);						//Unselect all, cursor at end
+	SendMessageA(hwnd_console_text, EM_REPLACESEL, 0, (LPARAM)crlf_str);	//Append
 }
 
 void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
@@ -233,7 +238,6 @@ void ConsoleInit() {
 	AddDStringC(	"cl_menu_font_texture",		"", C_CLMenuFontTexture);
 	AddDFloatC(		"cl_menu_fontid_size",		0, C_CLMenuFontIDSize);
 	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture);
-	AddDFloatC(		"cl_blockid_size",			0, C_CLBlockIDSize);
 	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder);
 	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel);
 	AddDCall(		"cl_blockids_clear",		ClearTextureLevels);
@@ -269,6 +273,7 @@ void ConsoleOpen() {
 	if (!hwnd_console) {
 		hwnd_console = CreateWindowA("console_window", "Console", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 768, 512, NULL, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowTextA(hwnd_console_text, console_buffer);
+		SendMessage(hwnd_console_text, EM_LINESCROLL, 0, CountNewLines(console_buffer));
 		ShowWindow(hwnd_console, SW_SHOW);
 	}
 }
