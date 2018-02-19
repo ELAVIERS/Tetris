@@ -17,14 +17,13 @@
 /*
 	Block (struct)
 
-	start_row	Which row of the block to put at the top of the screen when spawning it
+	
 	id			the block's character id
 	data		represents a square matrix defining the shape of the block
 	size		the amount of rows and columns data has
 	x, y		the block's x and y coordinates
 */
 typedef struct Block_s {
-	byte start_row;
 	char id;
 	unsigned short size;
 	bool *data;

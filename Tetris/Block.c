@@ -9,6 +9,7 @@
 
 typedef struct {
 	byte start_row;
+	byte start_column;
 	char id;
 	unsigned int size;
 	bool *data;
@@ -93,13 +94,12 @@ void BlockSetRandom(Block *block, unsigned short top) {
 	block->data = (bool*)malloc(sizesq * sizeof(bool));
 	block->id = new_block->id;
 	block->size = new_block->size;
-	block->start_row = new_block->start_row;
 
 	for (unsigned int i = 0; i < sizesq; ++i)
 		block->data[i] = new_block->data[i];
 
 	block->y = top - new_block->start_row;
-	block->x = 2;
+	block->x = new_block->start_column;
 }
 
 void SVAddBlock(const char **tokens, unsigned int count) {
@@ -116,6 +116,7 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 
 	blocktypes[last].id = tokens[0][0];
 	blocktypes[last].start_row = atoi(tokens[2]);
+	blocktypes[last].start_column = atoi(tokens[3]);
 	blocktypes[last].size = size;
 	blocktypes[last].data = (bool*)malloc(sizesq * sizeof(bool));
 

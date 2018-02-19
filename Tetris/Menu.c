@@ -118,7 +118,7 @@ void play_startgame() {
 	Menu_Free(menuslot1);
 	Menu_Free(menuslot2);
 
-	GameBegin(4);
+	GameBegin(1);
 
 	g_paused = false;
 }
