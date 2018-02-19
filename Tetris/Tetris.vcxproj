@@ -150,6 +150,7 @@
     <ClCompile Include="Block.c" />
     <ClCompile Include="Board.c" />
     <ClCompile Include="Callbacks.c" />
+    <ClCompile Include="Client.c" />
     <ClCompile Include="Config.c" />
     <ClCompile Include="Dvar.c" />
     <ClCompile Include="Error.c" />
@@ -161,9 +162,11 @@
     <ClCompile Include="Main.c" />
     <ClCompile Include="Matrix.c" />
     <ClCompile Include="Menu.c" />
+    <ClCompile Include="Messaging.c" />
     <ClCompile Include="Networking.c" />
     <ClCompile Include="Quad.c" />
     <ClCompile Include="Resource.c" />
+    <ClCompile Include="Server.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
     <ClCompile Include="String.c" />
@@ -178,6 +181,7 @@
     <ClInclude Include="Block.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="Callbacks.h" />
+    <ClInclude Include="Client.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Dvar.h" />
     <ClInclude Include="Error.h" />
@@ -188,9 +192,11 @@
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Menu.h" />
+    <ClInclude Include="Messaging.h" />
     <ClInclude Include="Networking.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Server.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="String.h" />

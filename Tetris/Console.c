@@ -6,6 +6,7 @@
 #include "Dvar.h"
 #include "Globals.h"
 #include "InputManager.h"
+#include "Messaging.h"
 #include "Resource.h"
 #include "String.h"
 #include <CommCtrl.h>
@@ -213,7 +214,9 @@ void ConsoleInit() {
 	////
 	//Config Variables
 	////
-	AddDStringC(	"cfg_texture",				"", C_RunAsConfig); AddCvar(GetDvar("cfg_texture"));
+	AddCvar(AddDStringC(	"cfg_texture",		"", C_RunAsConfig));
+
+	AddCvar(AddDStringC(		"name",			"Player", C_Name));
 
 	////
 	//
@@ -223,10 +226,14 @@ void ConsoleInit() {
 	AddDCall(		"exit",						Console_Exit);
 	AddDCall(		"list",						Console_List);
 	AddDCall(		"save",						Console_Save);
+	AddDFunction(	"send",						CFunc_Send);
 
 	AddDFunction(	"bind",						Bind);
 	AddDFunction(	"bindaxis",					BindAxis);
 	AddDCall(		"clear_binds",				ClearBinds);
+
+	AddDFloat(		"playercount",				4);
+	AddDString(		"port",						"7777");
 
 	AddDFunction(	"sv_blocks_add",			SVAddBlock);
 	AddDCall(		"sv_blocks_clear",			ClearBlocks);

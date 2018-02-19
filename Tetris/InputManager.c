@@ -213,31 +213,34 @@ void KeyUp(WORD vk) {
 #include <stdio.h>
 
 unsigned int BindsGetConfigString(char **out_string) {
-	char *string = NULL;
+	char *string = DupString("");
 	size_t stringlen = 1;
-
-	string = DupString("");
 
 	for (KeyBind *bind = binds; bind; bind = bind->next) {
 		const char *keyname = StringFromVKCode(bind->key);
+		size_t index = strlen(string);
 
 		if (bind->data.type == BIND_AXIS) {
-			stringlen += strlen("bindaxis   \n") + strlen(keyname) + strlen(bind->dvar->name) + 10;		//Bindaxis + spaces + newline + keyname + dvar name + float leeway + '\0'
+			size_t length = strlen("bindaxis   \n") + strlen(keyname) + strlen(bind->dvar->name) + 10;		//Bindaxis + spaces + newline + keyname + dvar name + float leeway + '\0'
+			stringlen += length;
 			string = (char*)realloc(string, stringlen);
 
-			snprintf(string + strlen(string), stringlen,"bindaxis %s %s %f\n", keyname, bind->dvar->name, bind->data.axisvalue);
+			snprintf(string + index, length,"bindaxis %s %s %f\n", keyname, bind->dvar->name, bind->data.axisvalue);
 		}
 		else if (bind->data.type == BIND_COMMAND) {
-			stringlen += strlen("bind  \n") + strlen(keyname) + strlen(bind->dvar->name) + 1;			//Bind + spaces + newline + keyname + dvar name + '\0'
+			size_t length = strlen("bind  \n") + strlen(keyname) + strlen(bind->dvar->name) + 1;			//Bind + spaces + newline + keyname + dvar name + '\0'
+			stringlen += length;
 			string = (char*)realloc(string, stringlen);
 
-			snprintf(string + strlen(string), stringlen, "bind %s %s\n", keyname, bind->dvar->name);
+			snprintf(string + index, length, "bind %s %s\n", keyname, bind->dvar->name);
 
 			for (unsigned int i = 0; i < bind->data.args.count; ++i) {
-				stringlen += (strlen(bind->data.args.tokens[i])) + 1;
+				index = stringlen - 1;
+				length = strlen(bind->data.args.tokens[i]) + 1;
+				stringlen += length;
 				string = (char*)realloc(string, stringlen);
 
-				snprintf(string + strlen(string), stringlen, " %s", bind->data.args.tokens[i]);
+				snprintf(string + index, length, " %s", bind->data.args.tokens[i]);
 			}
 		}
 	}

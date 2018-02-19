@@ -3,6 +3,7 @@
 #include "Dvar.h"
 #include "IO.h"
 #include "String.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #define LINE_MAX 512
@@ -80,13 +81,11 @@ void SaveCvars() {
 		char *value = DvarAllocValueString(node->dvar);
 
 		if (value) {
+			int index = size - 1;
 			size += strlen(node->dvar->name) + 1 + strlen(value) + 1;
 			buffer = (char*)realloc(buffer, size);
 
-			strcpy_s(buffer, size, node->dvar->name);
-			strcat_s(buffer, size, " ");
-			strcat_s(buffer, size, value);
-			strcat_s(buffer, size, "\n");
+			snprintf(buffer + index, size - index, "%s %s\n", node->dvar->name, value);
 
 			free(value);
 		}

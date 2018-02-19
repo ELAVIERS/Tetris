@@ -1,10 +1,11 @@
 #include "Game.h"
 #include "Board.h"
+#include "Client.h"
 #include "Error.h"
 #include "Globals.h"
 #include "Menu.h"
-#include "Networking.h"
 #include "Resource.h"
+#include "Server.h"
 #include "Shader.h"
 #include "Timing.h"
 #include <GL/GL.h>
@@ -57,14 +58,12 @@ void GameInit() {
 void GameFrame() {
 	TimerStart();
 
+	ServerFrame();
+	ClientFrame();
+
 	static float axis_x_prev;
 	static float drop_timer = 0.f;
 	static float das_timer = 0.f;
-	static const int title_size = 64;
-	static char title[64];
-
-	snprintf(title, title_size, "Tetris (%d FPS)", (int)(1.f / g_delta));
-	SetWindowTextA(g_hwnd, title);
 
 	if (board_count && !g_paused) {
 		drop_timer += g_delta;

@@ -4,6 +4,7 @@
 #include "Globals.h"
 #include "Menu.h"
 #include "Networking.h"
+#include "Server.h"
 #include "Settings.h"
 #include "Timing.h"
 #include "Window.h"
@@ -12,8 +13,6 @@
 #include <GL/wglew.h>
 #include <stdlib.h>
 #include <Windows.h>
-#include <WinSock2.h>
-#include <WS2tcpip.h>
 
 /*
 	Main.c
@@ -54,7 +53,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	RunConfig("config.cfg");
 	ConsolePrint("Done!\n");
 
-	NetworkingCreateSocket();
+	//StartServer();
 
 	//
 	//Seed RNG

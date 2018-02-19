@@ -1,18 +1,13 @@
 #include "Networking.h"
 #include "Console.h"
-#include "Dvar.h"
 #include <stdio.h>
 #include <Windows.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 
-char **port;
-
-SOCKET socket_listen;
-
-inline NetworkingError(const char *errorstr, int code) {
+void NetworkingError(const char *errorstr, int code) {
 	char error[128];
-	snprintf(error, 128, "ERROR: %s (%d)\n", errorstr, code);
+	snprintf(error, 128, "NET ERROR: %s (%d)\n", errorstr, code);
 	ConsolePrint(error);
 }
 
@@ -23,11 +18,71 @@ void NetworkingInit() {
 	if (result = WSAStartup(MAKEWORD(2, 2), &data))
 		NetworkingError("Could not initialise networking", result);
 	else ConsolePrint("Networking initialised\n");
-
-	port = &AddDString("port", "7777")->value.string;
 }
 
-void NetworkingCreateSocket() {
+SOCKET NetworkCreateClientSocket(const char *ip, const char *port) {
+	ConsolePrint("Attempting connection to ");
+	ConsolePrint(ip);
+	ConsolePrint(":");
+	ConsolePrint(port);
+	ConsolePrint("...\n");
+
+	ADDRINFOA *result = NULL, *current = NULL,
+
+		hints = {
+		AI_PASSIVE,
+		AF_UNSPEC,
+		SOCK_STREAM,
+		IPPROTO_TCP,
+		0,
+		NULL,
+		NULL,
+		NULL
+	};
+
+	if (getaddrinfo(ip, port, &hints, &result)) {
+		NetworkingError("Could not resolve address", WSAGetLastError());
+		return INVALID_SOCKET;
+	}
+	
+	SOCKET connection = INVALID_SOCKET;
+	for (current = result; current; current = current->ai_next) {
+		connection = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
+		if (connection == INVALID_SOCKET) {
+			NetworkingError("Could not create socket", WSAGetLastError());
+			freeaddrinfo(result);
+			return INVALID_SOCKET;
+		}
+		
+		if (connect(connection, current->ai_addr, (int)current->ai_addrlen) == SOCKET_ERROR) {
+			NetworkingError("Socket connection failed", WSAGetLastError());
+			closesocket(connection);
+			connection = INVALID_SOCKET;
+			continue;
+		}
+		break;
+	}
+
+	freeaddrinfo(result);
+
+	if (connection == INVALID_SOCKET) {
+		NetworkingError("Connection failed!", 0);
+		return INVALID_SOCKET;
+	}
+
+	u_long nonblocking = 1;
+	if (ioctlsocket(connection, FIONBIO, &nonblocking) == SOCKET_ERROR) {
+		NetworkingError("Could not set socket as non-blocking", WSAGetLastError());
+		closesocket(connection);
+		return INVALID_SOCKET;
+	}
+	
+	ConsolePrint("Connected to server\n");
+
+	return connection;
+}
+
+SOCKET NetworkCreateListenSocket(const char *port) {
 	ADDRINFOA *result = NULL, 
 	
 	hints = {
@@ -41,54 +96,47 @@ void NetworkingCreateSocket() {
 		NULL
 	};
 
-	if (getaddrinfo(NULL, *port, &hints, &result)) {
-		NetworkingError("Could not get address info", WSAGetLastError());
-		WSACleanup();
-		return;
+	if (getaddrinfo(NULL, port, &hints, &result)) {
+		NetworkingError("Could not resolve address", WSAGetLastError());
+		return INVALID_SOCKET;
 	}
 
-	socket_listen = INVALID_SOCKET;
-	socket_listen = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	SOCKET connection = INVALID_SOCKET;
+	connection = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 
-	if (socket_listen == INVALID_SOCKET) {
+	if (connection == INVALID_SOCKET) {
 		NetworkingError("Could not create socket", WSAGetLastError());
 		freeaddrinfo(result);
-		WSACleanup();
-		return;
+		return INVALID_SOCKET;
 	}
 
-	if (bind(socket_listen, result->ai_addr, (int)result->ai_addrlen)) {
+	if (bind(connection, result->ai_addr, (int)result->ai_addrlen)) {
 		NetworkingError("Could not bind socket", WSAGetLastError());
-		closesocket(socket_listen);
+		closesocket(connection);
 		freeaddrinfo(result);
-		WSACleanup();
-		return;
+		return INVALID_SOCKET;
 	}
 
 	freeaddrinfo(result);
+
+	u_long nonblocking = 1;
+	if (ioctlsocket(connection, FIONBIO, &nonblocking) == SOCKET_ERROR) {
+		NetworkingError("Could not set socket as non-blocking", WSAGetLastError());
+		closesocket(connection);
+		return INVALID_SOCKET;
+	}
+
+	if (listen(connection, SOMAXCONN) == SOCKET_ERROR) {
+		NetworkingError("Listen failed", WSAGetLastError());
+		closesocket(connection);
+		return INVALID_SOCKET;
+	}
+
 	ConsolePrint("Socket created successfully\n");
+
+	return connection;
+}
+
+void NetworkFrame() {
 	
 }
-
-void Listen() {
-	if (listen(socket_listen, SOMAXCONN) == SOCKET_ERROR) {
-		ConsolePrint("ERROR: listen failed\n");
-		closesocket(socket_listen);
-		WSACleanup();
-	}
-}
-
-/*
-typedef struct addrinfo
-{
-int                 ai_flags;       // AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST
-int                 ai_family;      // PF_xxx
-int                 ai_socktype;    // SOCK_xxx
-int                 ai_protocol;    // 0 or IPPROTO_xxx for IPv4 and IPv6
-size_t              ai_addrlen;     // Length of ai_addr
-char *              ai_canonname;   // Canonical name for nodename
-_Field_size_bytes_(ai_addrlen) struct sockaddr *   ai_addr;        // Binary address
-struct addrinfo *   ai_next;        // Next structure in linked list
-}
-ADDRINFOA, *PADDRINFOA;
-*/

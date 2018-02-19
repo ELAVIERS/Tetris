@@ -88,10 +88,12 @@ void Menu_Render(const Menu* menu) {
 }
 
 ////////////////////
+#include "Client.h"
 #include "Config.h"
 #include "Game.h"
 #include "Globals.h"
 #include "IO.h"
+#include "Server.h"
 #include "Settings.h"
 
 #define MENU_COUNT 2
@@ -154,7 +156,7 @@ void main_play() {
 }
 
 void main_connect() {
-	MessageBox(NULL, "Ha! You wish!", "lol no", MB_OK);
+	Client_OpenConnectionDialog();
 }
 
 void main_settings() {
@@ -163,6 +165,10 @@ void main_settings() {
 
 void main_quit() {
 	g_running = false;
+}
+
+void main_host() {
+	StartServer();
 }
 
 void pause_restart() {
@@ -184,6 +190,7 @@ void CreateMenu_Main() {
 
 	Menu_AddItem(menuslot1, "PLAY", main_play);
 	Menu_AddItem(menuslot1, "CONNECT", main_connect);
+	Menu_AddItem(menuslot1, "HOST", main_host);
 	Menu_AddItem(menuslot1, "SETTINGS", main_settings);
 	Menu_AddItem(menuslot1, "EXIT", main_quit);
 

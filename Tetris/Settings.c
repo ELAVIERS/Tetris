@@ -11,8 +11,9 @@
 #define ROW_HALF_WIDTH 248
 
 HWND hwnd_settings = NULL;
-
 HWND hwnd_setting_font_texture;
+HWND hwnd_setting_name;
+
 char **texture_config_filepaths = NULL;
 unsigned int texture_config_count = 0;
 
@@ -78,16 +79,34 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		hwnd_setting_font_texture = CreateWindowA(WC_COMBOBOXA, NULL, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE, 
 			ROW_HALF_WIDTH, 0, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
 
+		AddStaticLabel(instance, hwnd, "Multiplayer Name", 1);
+
+		hwnd_setting_name = CreateWindowA(WC_EDITA, NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 
+			ROW_HALF_WIDTH, ROW_HEIGHT, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
+
 		AddComboBoxEntries();
 		break;
 	}
 
 	case WM_COMMAND:
-		if (HIWORD(wparam) == CBN_SELCHANGE) {
+		switch (HIWORD(wparam)) {
+		case CBN_SELCHANGE:
+		{
 			int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
 			SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index]);
 
 			SaveCvars();
+		}
+			break;
+		case EN_CHANGE:
+		{	
+			char namebuffer[64];
+			GetWindowTextA(hwnd_setting_name, namebuffer, 64);
+			SetDvarString(GetDvar("name"), namebuffer);
+
+			SaveCvars();
+			break;
+		}
 		}
 		break;
 
