@@ -4,6 +4,7 @@
 #include "Globals.h"
 #include "Menu.h"
 #include "Networking.h"
+#include "Lobby.h"
 #include "Server.h"
 #include "Settings.h"
 #include "Timing.h"
@@ -43,8 +44,8 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	G_Init();
 	ConsoleInit();
 	SettingsInit();
+	LobbyInit();
 	TimerInit();
-
 	NetworkingInit();
 	GameInit();
 	MenuInit();
@@ -52,8 +53,6 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	ConsolePrint("Running config.cfg...\n");
 	RunConfig("config.cfg");
 	ConsolePrint("Done!\n");
-
-	//StartServer();
 
 	//
 	//Seed RNG

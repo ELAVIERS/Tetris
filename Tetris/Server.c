@@ -2,24 +2,26 @@
 #include "Client.h"
 #include "Console.h"
 #include "Dvar.h"
+#include "Lobby.h"
 #include "Networking.h"
 #include "Messaging.h"
 #include "String.h"
 #include <stdio.h> //snprintf
 #include <stdlib.h>
-#include <WS2tcpip.h> //inet_ntop
+#include <WS2tcpip.h>
 
 typedef struct {
 	SOCKET socket;
 	bool local;
-	char *name;
-} ServerClient;
+
+	MessageBuffer msg;
+} ServerSlot;
 
 SOCKET sock_server = INVALID_SOCKET;
 
-int next_client_id;
-int client_count;
-ServerClient *clients;
+byte next_slot;
+byte slot_count;
+ServerSlot *slots;
 
 bool ServerIsActive() {
 	return sock_server != INVALID_SOCKET;
@@ -42,78 +44,103 @@ void GetAddressString(struct sockaddr *addr, char *out) {
 	}
 }
 
-void ServerUpdateNextClient() {
-	next_client_id = -1;
+/*
+	Send/Receive functions
+*/
 
-	for (int i = 0; i < client_count; ++i)
-		if (!clients[i].local && clients[i].socket == INVALID_SOCKET) {
-			next_client_id = i;
-			break;
-		}
+void ServerFreeSlot(int);	//Forward declaration
+
+inline void ServerSend(int slot, const byte *buffer, uint16 count) {
+	if (slots[slot].socket != INVALID_SOCKET)
+		NetworkSend(slots[slot].socket, buffer, count);
+	else if (slots[slot].local)
+		ClientReceiveMessage(buffer);
 }
 
-void ServerCloseConnection(int id) {
-	closesocket(clients[id].socket);
-	clients[id].socket = INVALID_SOCKET;
-	SetPlayerName(id, "");
-
-	ServerUpdateNextClient();
+void ServerBroadcast(const byte *buffer, uint16 count) {
+	for (int i = 0; i < slot_count; ++i)
+		ServerSend(i, buffer, count);
 }
 
-void ServerReadSocket(int id) {
-	static int readlen, error;
-	static byte buffer[MSG_LEN];
+void ServerReceive(int id) {
+	if (slots[id].socket != INVALID_SOCKET) {
+		while (NetworkReceiveMsgBuffer(slots[id].socket, &slots[id].msg))
+			ServerReceiveMessage(slots[id].msg.buffer, id);
 
-	readlen = recv(clients[id].socket, buffer, MSG_LEN, 0);
+		if (slots[id].msg.error) {
+			ServerFreeSlot(id);
 
-	if (readlen == SOCKET_ERROR) {
-		error = WSAGetLastError();
+			char temp[64];
+			snprintf(temp, 64, "(TEMP) Kicking client cos error %d\n", slots[id].msg.error);
+			ConsolePrint(temp);
 
-		switch (error) {
-		case WSAEWOULDBLOCK:break;
-
-		case WSAETIMEDOUT:
-		{
-			byte msgbuffer[MSG_LEN];
-			msgbuffer[0] = SVMSG_TALK;
-			snprintf(msgbuffer + 1, MSG_LEN - 1, "%s timed out", clients[id].name);
-			ServerBroadcast(msgbuffer, strlen(msgbuffer + 1) + 2);
-		}
-
-			ServerCloseConnection(id);
-			break;
-
-		default:
-		{
-			byte msgbuffer[MSG_LEN];
-			msgbuffer[0] = SVMSG_TALK;
-			snprintf(msgbuffer + 1, MSG_LEN - 1, "%s dipped", clients[id].name);
-			ServerBroadcast(msgbuffer, strlen(msgbuffer + 1) + 2);
-		}
-
-			ServerCloseConnection(id);
+			byte message[] = { SVMSG_LEAVE, (byte)id, 0 };
+			ServerBroadcast(message, sizeof(message));
 		}
 	}
-	else if (readlen > 0)
-		ServerReceiveMessage(buffer, MSG_LEN, id);
 }
+
+/*
+Slot Handling
+*/
+
+void ServerUpdateNextSlot() {
+	next_slot = -1;
+
+	for (int i = 0; i < slot_count; ++i)
+		if (!slots[i].local && slots[i].socket == INVALID_SOCKET) {
+			next_slot = i;
+			break;
+		}
+}
+
+void ServerInitSlot(int id) {
+	byte message[MSG_LEN] = { SVMSG_SERVERINFO, slot_count };
+	ServerSend(id, message, 2);
+
+	message[0] = SVMSG_NAME;
+	for (int i = 0; i < slot_count; ++i) {
+		if (LobbyGetClientName(i)[0] != '\0') {
+			message[1] = (byte)i;
+			strcpy_s(message + 2, MSG_LEN - 2, LobbyGetClientName(i));
+			ServerSend(id, message, strlen(message + 2) + 3);
+		}
+	}
+}
+
+inline void ServerFreeSlot(int id) {
+	closesocket(slots[id].socket);
+	slots[id].socket = INVALID_SOCKET;
+
+	ServerUpdateNextSlot();
+}
+
+/*
+	Socket handling
+*/
 
 void ServerAcceptSocket(int id) {
 	static struct sockaddr addressinfo;
 	static int addressinfo_sz = sizeof(addressinfo);
 
-	clients[id].socket = accept(sock_server, &addressinfo, &addressinfo_sz);
+	slots[id].socket = accept(sock_server, &addressinfo, &addressinfo_sz);
 
-	if (clients[id].socket != INVALID_SOCKET) {
+	if (slots[id].socket != INVALID_SOCKET) {
+		ServerInitSlot(id);
+
 		char string[INET6_ADDRSTRLEN] = "unknown";
 		GetAddressString(&addressinfo, string);
 
 		ConsolePrint(string);
 		ConsolePrint(" connected to the server\n");
 
-		ServerUpdateNextClient();
+		ServerUpdateNextSlot();
 	}
 }
+
+/*
+	Management
+*/
 
 void StartServer() {
 	IFSERVER return;
@@ -121,60 +148,42 @@ void StartServer() {
 	sock_server = NetworkCreateListenSocket(GetDvar("port")->value.string);
 
 	IFSERVER{
-		client_count = (int)GetDvar("playercount")->value.number;
-		if (client_count < 1) client_count = 1;
+		slot_count = (int)GetDvar("playercount")->value.number;
+		if (slot_count < 1) slot_count = 1;
 
-		clients = (ServerClient*)malloc(client_count * sizeof(ServerClient));
+		slots = (ServerSlot*)malloc(slot_count * sizeof(ServerSlot));
 
-		for (int i = 0; i < client_count; ++i) {
-			clients[i].socket = INVALID_SOCKET;
-			clients[i].name = DupString("");
-			clients[i].local = false;
+		for (int i = 0; i < slot_count; ++i) {
+			slots[i].socket = INVALID_SOCKET;
+			slots[i].local = false;
+			slots[i].msg.bytes_left = 0;
 		}
 
-		clients[0].local = true;
+		slots[0].local = true;
+		ServerInitSlot(0);
 
 		MessageServerString(SVMSG_NAME, GetDvar("name")->value.string);
 
-		next_client_id = 1;
+		next_slot = 1;
 	}
 }
 
 void ServerFrame() {
 	IFSERVER{
-		if (next_client_id >= 0)
-			ServerAcceptSocket(next_client_id);
+		if (next_slot >= 0)
+			ServerAcceptSocket(next_slot);
 
-		for (int i = 0; i < client_count; ++i)
-			if (clients[i].socket != INVALID_SOCKET)
-				ServerReadSocket(i);
+		for (int i = 0; i < slot_count; ++i)
+			if (slots[i].socket != INVALID_SOCKET)
+				ServerReceive(i);
 	}
 }
 
 void StopServer() {
-	for (int i = 0; i < client_count; ++i)
-		if (clients[i].socket != INVALID_SOCKET) {
-			closesocket(clients[i].socket);
-			free(clients[i].name);
-		}
+	for (int i = 0; i < slot_count; ++i)
+		if (slots[i].socket != INVALID_SOCKET)
+			closesocket(slots[i].socket);
 
 	closesocket(sock_server);
-	free(clients);
-}
-
-void ServerBroadcast(const byte *buffer, unsigned int count) {
-	for (int i = 0; i < client_count; ++i)
-		if (clients[i].socket != INVALID_SOCKET)
-			send(clients[i].socket, buffer, count, 0);
-		else if (clients[i].local)
-			ClientReceiveMessage(buffer, count);
-}
-
-void SetPlayerName(byte playerid, const char *name) {
-	free(clients[playerid].name);
-	clients[playerid].name = DupString(name);
-}
-
-const char *GetPlayerName(byte playerid) {
-	return clients[playerid].name;
+	free(slots);
 }

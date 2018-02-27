@@ -43,9 +43,15 @@ unsigned int TakeLine(char dest[], const char *src, unsigned int count) {
 	return skip + line_length;
 }
 
-char* FloatToString(float value) {
+char* AllocStringFromFloat(float value) {
 	char* string = (char*)malloc(13);
 	sprintf_s(string, 13, "%f", value);
+	return string;
+}
+
+char* AllocStringFromInt(int value) {
+	char* string = (char*)malloc(13);
+	sprintf_s(string, 13, "%d", value);
 	return string;
 }
 

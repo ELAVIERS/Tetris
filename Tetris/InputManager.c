@@ -168,39 +168,41 @@ void KeyDown(WORD vk) {
 	}
 
 	if (!g_paused) {
-		if (vk == VK_ESCAPE && g_ingame) {
+		if (vk == VK_ESCAPE) {
 			CreateMenu_Pause();
 			return;
 		}
-
-		for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
-			if (bind->key == vk)
-				switch (bind->data.type) {
-				case BIND_COMMAND:
-					DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count);
-					break;
-				case BIND_AXIS:
-					SetDvarFloat(bind->dvar, bind->dvar->value.number + bind->data.axisvalue);
-					break;
-				}
 	}
 	else {
 		switch (vk) {
 		case VK_ESCAPE:
 			ActiveMenu_Close();
-			break;
+			return;
 
 		case VK_UP:
 			ActiveMenu_ChangeSelection(1);
-			break;
+			return;
 		case VK_DOWN:
 			ActiveMenu_ChangeSelection(-1);
-			break;
+			return;
 		case VK_RETURN:
 			ActiveMenu_Select();
-			break;
+			return;
 		}
 	}
+
+	for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
+		if (bind->key == vk) {
+			switch (bind->data.type) {
+			case BIND_COMMAND:
+				DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count);
+				break;
+			case BIND_AXIS:
+				SetDvarFloat(bind->dvar, bind->dvar->value.number + bind->data.axisvalue);
+				break;
+			}
+			return;
+		}
 }
 
 void KeyUp(WORD vk) {

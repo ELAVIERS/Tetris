@@ -13,3 +13,5 @@ void ConsoleInit();
 
 //Shows the console window
 void ConsoleOpen();
+
+void ConsoleClose();

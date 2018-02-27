@@ -6,6 +6,7 @@
 #include "Dvar.h"
 #include "Globals.h"
 #include "InputManager.h"
+#include "Lobby.h"
 #include "Messaging.h"
 #include "Resource.h"
 #include "String.h"
@@ -71,7 +72,7 @@ LRESULT CALLBACK ConsoleEditProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 	case WM_KEYDOWN:
 		switch (wparam) {
 		case VK_OEM_3: 
-			DestroyWindow(hwnd_console); 
+			ConsoleClose();
 			break;
 
 		case VK_RETURN:
@@ -130,11 +131,11 @@ LRESULT CALLBACK ConsoleProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 
 	case WM_KEYUP:
 		if (wparam == VK_OEM_3)
-			DestroyWindow(hwnd);
+			ConsoleClose();
 		break;
 
 	case WM_CLOSE:
-		DestroyWindow(hwnd);
+		ConsoleClose();
 		break;
 	case WM_DESTROY:
 		hwnd_console = NULL;
@@ -173,16 +174,20 @@ void CopyString_TOCRLF(char *dest, size_t max, const char *src) {
 
 void ConsolePrint(const char *string) {
 	size_t string_length = strlen(string) + CountNewLines(string);
-	console_buffer_size += string_length;
-	console_buffer = (char*)realloc(console_buffer, console_buffer_size);
 
 	char *crlf_str = (char*)malloc(string_length + 1);
 	CopyString_TOCRLF(crlf_str, string_length + 1, string);
-	strcat_s(console_buffer, console_buffer_size, crlf_str);
 
-	SendMessageA(hwnd_console_text, EM_SETSEL, 0, -1);						//Select all text
-	SendMessageA(hwnd_console_text, EM_SETSEL, -1, -1);						//Unselect all, cursor at end
-	SendMessageA(hwnd_console_text, EM_REPLACESEL, 0, (LPARAM)crlf_str);	//Append
+	if (hwnd_console) {
+		SendMessageA(hwnd_console_text, EM_SETSEL, 0, -1);						//Select all text
+		SendMessageA(hwnd_console_text, EM_SETSEL, -1, -1);						//Unselect all, cursor at end
+		SendMessageA(hwnd_console_text, EM_REPLACESEL, 0, (LPARAM)crlf_str);	//Append
+	}
+	else {
+		console_buffer_size += string_length;
+		console_buffer = (char*)realloc(console_buffer, console_buffer_size);
+		strcat_s(console_buffer, console_buffer_size, crlf_str);
+	}
 }
 
 void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
@@ -221,12 +226,14 @@ void ConsoleInit() {
 	////
 	//
 	////
+	AddDCall(		"lobby",					LobbyShow);
+
 	AddDFunction(	"run",						Console_Run);
 	AddDCall(		"clear",					Console_Clear);
 	AddDCall(		"exit",						Console_Exit);
 	AddDCall(		"list",						Console_List);
 	AddDCall(		"save",						Console_Save);
-	AddDFunction(	"send",						CFunc_Send);
+	AddDFunction(	"say",						CFunc_Send);
 
 	AddDFunction(	"bind",						Bind);
 	AddDFunction(	"bindaxis",					BindAxis);
@@ -280,7 +287,26 @@ void ConsoleOpen() {
 	if (!hwnd_console) {
 		hwnd_console = CreateWindowA("console_window", "Console", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 768, 512, NULL, NULL, GetModuleHandle(NULL), NULL);
 		SetWindowTextA(hwnd_console_text, console_buffer);
-		SendMessage(hwnd_console_text, EM_LINESCROLL, 0, CountNewLines(console_buffer));
-		ShowWindow(hwnd_console, SW_SHOW);
+		SendMessageA(hwnd_console_text, EM_LINESCROLL, 0, CountNewLines(console_buffer));
+
+		free(console_buffer);
+
+		ShowWindow(hwnd_console, SW_SHOWNORMAL);
+	}
+}
+
+void ConsoleClose() {
+	if (hwnd_console) {
+		SendMessageA(hwnd_console_text, EM_SETSEL, 0, -1);
+
+		DWORD length;
+		SendMessageA(hwnd_console_text, EM_GETSEL, (WPARAM)NULL, (LPARAM)&length);
+
+		console_buffer_size = length + 1;
+		console_buffer = (char*)malloc(console_buffer_size);
+
+		GetWindowTextA(hwnd_console_text, console_buffer, console_buffer_size);
+
+		DestroyWindow(hwnd_console);
 	}
 }

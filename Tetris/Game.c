@@ -211,13 +211,16 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 }
 
 void GameInputDrop() {
-	while (BoardInputDown(boards + 0));
+	if (board_count)
+		while (BoardInputDown(boards + 0));
 }
 
 void GameInputCW() {
-	BoardInputCW(boards + 0);
+	if (board_count)
+		BoardInputCW(boards + 0);
 }
 
 void GameInputCCW() {
-	BoardInputCCW(boards + 0);
+	if (board_count)
+		BoardInputCCW(boards + 0);
 }

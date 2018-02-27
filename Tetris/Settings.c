@@ -81,8 +81,10 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		AddStaticLabel(instance, hwnd, "Multiplayer Name", 1);
 
-		hwnd_setting_name = CreateWindowA(WC_EDITA, NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 
+		hwnd_setting_name = CreateWindowExA(WS_EX_CLIENTEDGE, WC_EDITA, NULL, WS_CHILD | WS_VISIBLE, 
 			ROW_HALF_WIDTH, ROW_HEIGHT, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
+
+		
 
 		AddComboBoxEntries();
 		break;

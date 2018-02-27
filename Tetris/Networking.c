@@ -1,5 +1,6 @@
 #include "Networking.h"
 #include "Console.h"
+#include "Messaging.h"
 #include <stdio.h>
 #include <Windows.h>
 #include <WinSock2.h>
@@ -137,6 +138,90 @@ SOCKET NetworkCreateListenSocket(const char *port) {
 	return connection;
 }
 
-void NetworkFrame() {
+/*
+	NetworkReceive
+
+	Receives data from a socket to a messagebuffer
+	returns true if any data was received
+*/
+bool NetworkReceive(SOCKET connection, MessageBuffer *msg) {
+	static int readlen;
+	readlen = recv(connection, msg->buffer + msg->current_length, msg->bytes_left, 0);
+		
+	if (readlen == SOCKET_ERROR) {
+		msg->error = WSAGetLastError();
+			
+		if (msg->error != WSAEWOULDBLOCK) {
+			char errorstr[64];
+			snprintf(errorstr, 64, "Socket receive error %d\n", msg->error);
+			ConsolePrint(errorstr);
+		}
+		else msg->error = 0;
+	}
+	else if (readlen > 0) {
+		msg->current_length += readlen;
+		msg->bytes_left -= readlen;
+
+		return true;
+	}
+
+	return false;
+}
+
+/*
+	NetworkReceiveMsgBuffer
+
+	Receives message data from a socket to a messagebuffer
+	returns true if the message is complete
+*/
+bool NetworkReceiveMsgBuffer(SOCKET connection, MessageBuffer *msg) {
+	msg->error = 0;
+
+	//If not currently reading a message..
+	if (msg->bytes_left == 0) {
+		msg->current_length = 0;
+		msg->bytes_left = sizeof(uint16);
+
+		if (NetworkReceive(connection, msg)) {
+			while (msg->bytes_left) {
+				NetworkReceive(connection, msg);
+
+				if (msg->error) {
+					msg->bytes_left = 0;
+					return false;
+				}
+			}
+
+			msg->bytes_left = BufferToUint16(msg->buffer);
+			msg->current_length = 0;
+		}
+		else {
+			msg->bytes_left = 0;
+
+			return false;
+		}
+	}
+
+	if (NetworkReceive(connection, msg) && msg->bytes_left == 0) {
+		//We have read the whole length
+		return true;
+	}
 	
+	return false;
+}
+
+void NetworkSend(SOCKET socket, const byte *data, uint16 size) {
+	static int err;
+
+	byte message_size_buffer[2];
+	Uint16ToBuffer(size, message_size_buffer);
+
+	if (send(socket, message_size_buffer, 2, 0) == SOCKET_ERROR) {
+		err = WSAGetLastError();
+		return;
+	}
+
+	if (send(socket, data, size, 0) == SOCKET_ERROR) {
+		err = WSAGetLastError();
+	}
 }

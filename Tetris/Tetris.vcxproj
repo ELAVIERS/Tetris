@@ -159,6 +159,7 @@
     <ClCompile Include="Globals.c" />
     <ClCompile Include="IO.c" />
     <ClCompile Include="InputManager.c" />
+    <ClCompile Include="Lobby.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Matrix.c" />
     <ClCompile Include="Menu.c" />
@@ -190,6 +191,7 @@
     <ClInclude Include="Globals.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="Lobby.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Messaging.h" />

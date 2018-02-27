@@ -10,7 +10,4 @@ void StartServer();
 void ServerFrame();
 void StopServer();
 
-void ServerBroadcast(const byte* buffer, unsigned int length);
-
-void SetPlayerName(byte playerid, const char *name);
-const char *GetPlayerName(byte playerid);
+void ServerBroadcast(const byte* buffer, uint16 size);

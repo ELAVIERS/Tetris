@@ -147,7 +147,7 @@ void PrintValue(Dvar* dvar) {
 	switch (dvar->type) {
 	case DVT_FLOAT:
 	{
-		char *str = FloatToString(dvar->value.number);
+		char *str = AllocStringFromFloat(dvar->value.number);
 		ConsolePrint(str);
 		free(str);
 	}
@@ -216,7 +216,7 @@ char* DvarAllocValueString(const Dvar  *dvar) {
 	case DVT_STRING:
 		return DupString(dvar->value.string);
 	case DVT_FLOAT:
-		return FloatToString(dvar->value.number);
+		return AllocStringFromFloat(dvar->value.number);
 	}
 
 	return NULL;

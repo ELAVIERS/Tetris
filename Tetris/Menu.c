@@ -181,6 +181,8 @@ void pause_endgame() {
 	Menu_Free(menuslot1);
 
 	GameEnd();
+
+	CreateMenu_Main();
 }
 
 void CreateMenu_Main() {

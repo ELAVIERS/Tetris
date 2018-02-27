@@ -17,7 +17,9 @@ char* DupString(const char *source);
 */
 unsigned int TakeLine(char dest[], const char *src, unsigned int count);
 
-char* FloatToString(float value);
+char* AllocStringFromFloat(float value);
+
+char* AllocStringFromInt(int value);
 
 /*
 	SplitTokens
