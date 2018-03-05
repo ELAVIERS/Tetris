@@ -4,15 +4,9 @@
 #define MATDOT(A, B, R, C) A[R][0] * B[0][C] + A[R][1] * B[1][C] + A[R][2] * B[2][C]
 
 void Mat3Multiply(Mat3 a, const Mat3 b) {
-	a[0][0] = MATDOT(a, b, 0, 0);
-	a[0][1] = MATDOT(a, b, 0, 1);
-	a[0][2] = MATDOT(a, b, 0, 2);
-	a[1][0] = MATDOT(a, b, 1, 0);
-	a[1][1] = MATDOT(a, b, 1, 1);
-	a[1][2] = MATDOT(a, b, 1, 2);
-	a[2][0] = MATDOT(a, b, 2, 0);
-	a[2][1] = MATDOT(a, b, 2, 1);
-	a[2][2] = MATDOT(a, b, 2, 2);
+	a[0][0] = MATDOT(a, b, 0, 0); a[0][1] = MATDOT(a, b, 0, 1); a[0][2] = MATDOT(a, b, 0, 2);
+	a[1][0] = MATDOT(a, b, 1, 0); a[1][1] = MATDOT(a, b, 1, 1); a[1][2] = MATDOT(a, b, 1, 2);
+	a[2][0] = MATDOT(a, b, 2, 0); a[2][1] = MATDOT(a, b, 2, 1); a[2][2] = MATDOT(a, b, 2, 2);
 }
 
 void Mat3Identity(Mat3 out) {

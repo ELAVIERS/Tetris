@@ -1,8 +1,11 @@
 #include "Dvar.h"
 #include "Console.h"
+#include "Messaging.h"
+#include "Server.h"
 #include "String.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 typedef struct DvarNode_s {
 	char key;
@@ -138,9 +141,26 @@ void ListNodes(DvarNode *node) {
 	}
 }
 
+void SendServerNodes(DvarNode *node, int playerid) {
+	static byte message[MSG_LEN] = { SVMSG_COMMAND };
+
+	for (; node; node = node->next) {
+		if (node->dvar && node->dvar->server) {
+			unsigned int string_length = DvarGetCommandString(node->dvar, message + 1, MSG_LEN - 1);
+			if (string_length)
+				ServerSend(playerid, message, string_length + 2);
+		}
+
+		if (node->child)
+			SendServerNodes(node->child, playerid);
+	}
+}
+
 ////////////////
 
 void PrintValue(Dvar* dvar) {
+	if (dvar->type == DVT_FUNCTION || dvar->type == DVT_CALL) return;
+
 	ConsolePrint(dvar->name);
 	ConsolePrint(" = ");
 
@@ -174,7 +194,7 @@ Dvar* GetDvar(const char *name) {
 	return node->dvar;
 }
 
-Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *callback) {
+Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *callback, bool server) {
 	if (dvar_root && GetDvar(name))
 		return NULL;
 
@@ -182,7 +202,8 @@ Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *c
 	dvar->name = DupString(name);
 	dvar->type = type;
 	dvar->callback = callback;
-	
+	dvar->server = server;
+
 	if (type == DVT_STRING)
 		dvar->value.string = DupString(value.string);
 	else
@@ -231,6 +252,21 @@ void FreeDvars() {
 	FreeNode(dvar_root);
 }
 
+unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int dest_size) {
+	char *value = DvarAllocValueString(dvar);
+
+	if (value) {
+		snprintf(dest, dest_size, "%s %s", dvar->name, value);
+
+		free(value);
+
+		//Return length of string
+		return strlen(dvar->name) + 1 + strlen(value);
+	}
+
+	return 0;
+}
+
 ////////////////
 
 void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count) {
@@ -265,13 +301,18 @@ void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count) {
 		}
 	}
 
-	PrintValue(dvar);
-
 	if (count > 0 && dvar->callback)
 		dvar->callback(dvar->value);
 }
 
-void HandleCommand(const char **tokens, unsigned int count) {
+void HandleCommand(const char **tokens, unsigned int count, const char *string, bool message_server) {
+	char **tokens_created = NULL;
+
+	if (string) {
+		count = SplitTokens(string, &tokens_created);
+		tokens = tokens_created;
+	}
+
 	if (count == 0) return;
 
 	Dvar *dvar = GetDvar(tokens[0]);
@@ -279,5 +320,34 @@ void HandleCommand(const char **tokens, unsigned int count) {
 		ConsolePrint(tokens[0]);
 		ConsolePrint(" is not a variable\n");
 	}
-	else DvarCommand(dvar, tokens + 1, count - 1);
+	else {
+		if (message_server && dvar->server) {
+			if (string)
+				MessageServerString(SVMSG_COMMAND, string);
+			else {
+				char *commandstr = CombineTokens(tokens, count);
+				MessageServerString(SVMSG_COMMAND, commandstr);
+				free(commandstr);
+			}
+		}
+		else {
+			DvarCommand(dvar, tokens + 1, count - 1);
+			PrintValue(dvar);
+		}
+	}
+
+	if (tokens_created)
+		FreeTokens(tokens_created, count);
+}
+
+void HandleCommandTokens(const char **tokens, unsigned int count) {
+	HandleCommand(*&tokens, count, NULL, true);
+}
+
+void HandleCommandString(const char *command, bool message_server) {
+	HandleCommand(NULL, 0, command, message_server);
+}
+
+void SendServerDvars(int id) {
+	SendServerNodes(dvar_root, id);
 }

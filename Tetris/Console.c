@@ -9,6 +9,7 @@
 #include "Lobby.h"
 #include "Messaging.h"
 #include "Resource.h"
+#include "Server.h"
 #include "String.h"
 #include <CommCtrl.h>
 #include <stdlib.h>
@@ -38,16 +39,6 @@ inline void ConsoleResetBuffer() {
 	console_buffer = (char*)malloc(1);
 	console_buffer[0] = '\0';
 	console_buffer_size = 1;
-}
-
-void SubmitCommand(const char* command) {
-	char **tokens;
-	unsigned int count = SplitTokens(command, &tokens);
-
-	if (count) {
-		HandleCommand(tokens, count);
-		FreeTokens(tokens, count);
-	}
 }
 
 LRESULT CALLBACK ConsoleEditProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -80,7 +71,7 @@ LRESULT CALLBACK ConsoleEditProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 				char buffer[CONSOLE_BUFFER_LENGTH];
 				GetWindowTextA(hwnd, buffer, CONSOLE_BUFFER_LENGTH);
 				SetWindowTextA(hwnd, "");
-				SubmitCommand(buffer);
+				HandleCommandString(buffer, true);
 			}
 			break;
 		}
@@ -191,7 +182,7 @@ void ConsolePrint(const char *string) {
 }
 
 void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
-DFunc Console_Run;
+DFunc Console_Admin, Console_Run;
 
 void ConsoleInit() {
 	ConsoleResetBuffer();
@@ -219,42 +210,51 @@ void ConsoleInit() {
 	////
 	//Config Variables
 	////
-	AddCvar(AddDStringC(	"cfg_texture",		"", C_RunAsConfig));
+	AddCvar(AddDStringC("cfg_texture", "", C_RunAsConfig, false));
 
-	AddCvar(AddDStringC(		"name",			"Player", C_Name));
+	AddCvar(AddDStringC("name", "Player", C_Name, false));
 
 	////
 	//
 	////
-	AddDCall(		"lobby",					LobbyShow);
+	AddDCall(		"lobby",					LobbyShow,		false);
 
-	AddDFunction(	"run",						Console_Run);
-	AddDCall(		"clear",					Console_Clear);
-	AddDCall(		"exit",						Console_Exit);
-	AddDCall(		"list",						Console_List);
-	AddDCall(		"save",						Console_Save);
-	AddDFunction(	"say",						CFunc_Send);
+	AddDFunction(	"sv_admin_add",				Console_Admin,	true);
+	AddDFunction(	"run",						Console_Run,	false);
+	AddDCall(		"clear",					Console_Clear,	false);
+	AddDCall(		"exit",						Console_Exit,	false);
+	AddDCall(		"list",						Console_List,	false);
+	AddDCall(		"save",						Console_Save,	false);
+	AddDFunction(	"say",						CFunc_Send,		false);
 
-	AddDFunction(	"bind",						Bind);
-	AddDFunction(	"bindaxis",					BindAxis);
-	AddDCall(		"clear_binds",				ClearBinds);
+	AddDFunction(	"bind",						Bind,			false);
+	AddDFunction(	"bindaxis",					BindAxis,		false);
+	AddDCall(		"clear_binds",				ClearBinds,		false);
 
-	AddDFloat(		"playercount",				4);
-	AddDString(		"port",						"7777");
+	AddDFloat(		"playercount",				4,				true);
+	AddDString(		"port",						"7777",			true);
 
-	AddDFunction(	"sv_blocks_add",			SVAddBlock);
-	AddDCall(		"sv_blocks_clear",			ClearBlocks);
-	AddDFloat(		"sv_board_width",			10);
-	AddDFloat(		"sv_board_height",			20);
+	AddDFunction(	"sv_blocks_add",			SVAddBlock,		true);
+	AddDCall(		"sv_blocks_clear",			ClearBlocks,	true);
+	AddDFloat(		"sv_board_width",			10,				true);
+	AddDFloat(		"sv_board_height",			20,				true);
+	
+	AddDStringC(	"mode",						"", C_RunAsConfig, false);
 
-	AddDStringC(	"cl_font_texture",			"",	C_CLFontTexture);
-	AddDFloatC(		"cl_fontid_size",			0, C_CLFontIDSize);
-	AddDStringC(	"cl_menu_font_texture",		"", C_CLMenuFontTexture);
-	AddDFloatC(		"cl_menu_fontid_size",		0, C_CLMenuFontIDSize);
-	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture);
-	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder);
-	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel);
-	AddDCall(		"cl_blockids_clear",		ClearTextureLevels);
+	AddDStringC(	"cl_font_texture",			"",	C_CLFontTexture, false);
+	AddDFloatC(		"cl_fontid_size",			0, C_CLFontIDSize, false);
+	AddDStringC(	"cl_menu_font_texture",		"", C_CLMenuFontTexture, false);
+	AddDFloatC(		"cl_menu_fontid_size",		0, C_CLMenuFontIDSize, false);
+	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture, false);
+	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder, false);
+	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel, false);
+	AddDCall(		"cl_blockids_clear",		ClearTextureLevels, false);
+}
+
+void Console_Admin(const char **tokens, unsigned int count) {
+	if (count == 0) return;
+
+	ServerSetAdmin(atoi(tokens[0]));
 }
 
 void Console_Clear() {
@@ -305,7 +305,7 @@ void ConsoleClose() {
 		console_buffer_size = length + 1;
 		console_buffer = (char*)malloc(console_buffer_size);
 
-		GetWindowTextA(hwnd_console_text, console_buffer, console_buffer_size);
+		GetWindowTextA(hwnd_console_text, console_buffer, (int)console_buffer_size);
 
 		DestroyWindow(hwnd_console);
 	}

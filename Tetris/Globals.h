@@ -17,7 +17,6 @@ HDC				g_devcontext;
 
 bool			g_running;
 
-bool			g_ingame;
 bool			g_paused;
 
 float			g_delta;

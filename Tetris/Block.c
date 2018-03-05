@@ -12,7 +12,7 @@ typedef struct {
 	byte start_column;
 	char id;
 	unsigned int size;
-	bool *data;
+	byte *data;
 } BlockData;
 
 BlockData *blocktypes = NULL;
@@ -68,23 +68,24 @@ void BlockRotateCW(Block *block) {
 	BlockDataFlipColumns(block->data, block->size);
 }
 
-void RenderBlock(const Block *block, const Quad *quad, float x_offset, float y_offset, float block_w, float block_h) {
-	if (!blocktypes)
-		return;
-
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad) {
 	Mat3 transform;
 
-	unsigned int sizesq = SQUARE(block->size);
-	for (unsigned int i = 0; i < sizesq; ++i) {
-		if (block->data[i]) {
-			Mat3Identity(transform);
-			Mat3Translate(transform, block->x + (x_offset / block_w) + (float)(i % block->size), block->y + (y_offset / block_h) + (float)(i / block->size));
-			Mat3Scale(transform, block_w, block_h);
-			ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	for (unsigned int r = 0; r < rows; ++r)
+		for (unsigned int c = 0; c < columns; ++c) {
+			if (buffer[RC1D(columns, r, c)]) {
+				Mat3Identity(transform);
+				Mat3Translate(transform, (float)c, (float)r);
+				Mat3Multiply(transform, in_transform);
+				ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
 
-			QuadRender(quad);
-		};
-	}
+				short index = TextureLevelIDIndex(buffer[RC1D(columns, r, c)]);
+				glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"),
+					(float)(index % divsx) / (float)divsx, (float)(index / divsx) / (float)divsy);
+
+				QuadRender(quad);
+			};
+		}
 }
 
 void BlockSetRandom(Block *block, unsigned short top) {
@@ -103,12 +104,10 @@ void BlockSetRandom(Block *block, unsigned short top) {
 }
 
 void SVAddBlock(const char **tokens, unsigned int count) {
-	if (count < 3) return;
+	if (count < 4) return;
 	int sizesq = (int)strlen(tokens[1]);
 	int size = PerfectSqrt(sizesq);
 	if (size == 0) return;
-
-	int rotation_point = atoi(tokens[0]);
 
 	int last = type_count;
 	++type_count;
@@ -118,10 +117,10 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 	blocktypes[last].start_row = atoi(tokens[2]);
 	blocktypes[last].start_column = atoi(tokens[3]);
 	blocktypes[last].size = size;
-	blocktypes[last].data = (bool*)malloc(sizesq * sizeof(bool));
+	blocktypes[last].data = (byte*)malloc(sizesq);
 
 	for (int i = 0; i < sizesq; ++i)
-		blocktypes[last].data[i] = tokens[1][i] != '0';
+		blocktypes[last].data[i] = tokens[1][i] != '0' ? tokens[0][0] : 0;
 
 	BlockDataFlipColumns(blocktypes[last].data, blocktypes[last].size);
 }
@@ -130,4 +129,49 @@ void ClearBlocks() {
 	free(blocktypes);
 	blocktypes = NULL;
 	type_count = 0;
+}
+
+#include "Messaging.h"
+#include "Server.h"
+#include "String.h"
+
+#define FIRST_ARG_LOC 15
+
+void SendBlockInfo(int playerid) {
+	byte message[MSG_LEN];
+	message[0] = SVMSG_COMMAND;
+
+	strcpy_s(message + 1, MSG_LEN - 1, "sv_blocks_add ");
+
+	int msgindex;
+
+	for (unsigned int i = 0; i < type_count; ++i) {
+		msgindex = FIRST_ARG_LOC;
+		message[msgindex++] = blocktypes[i].id;
+		message[msgindex++] = ' ';
+
+		for (int r = 0; r < blocktypes[i].size; ++r)
+			for (int c = 0; c < blocktypes[i].size; ++c)
+				message[msgindex++] = blocktypes[i].data[RC1D(blocktypes[i].size, blocktypes[i].size - 1 - r, c)] ? '1' : '0';
+
+		message[msgindex++] = ' ';
+
+		char *string = AllocStringFromInt(blocktypes[i].start_row);
+		for (const char *c = string; *c != '\0'; ++c)
+			message[msgindex++] = *c;
+
+		free(string);
+
+		message[msgindex++] = ' ';
+
+		string = AllocStringFromInt(blocktypes[i].start_column);
+		for (const char *c = string; *c != '\0'; ++c)
+			message[msgindex++] = *c;
+
+		message[msgindex] = '\0';
+
+		free(string);
+
+		ServerSend(playerid, message, msgindex + 1);
+	}
 }

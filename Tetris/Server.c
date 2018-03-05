@@ -1,7 +1,9 @@
 #include "Server.h"
 #include "Client.h"
+#include "Config.h"
 #include "Console.h"
 #include "Dvar.h"
+#include "Game.h"
 #include "Lobby.h"
 #include "Networking.h"
 #include "Messaging.h"
@@ -14,7 +16,9 @@ typedef struct {
 	SOCKET socket;
 	bool local;
 
-	MessageBuffer msg;
+	NetMessage msg;
+
+	bool admin;
 } ServerSlot;
 
 SOCKET sock_server = INVALID_SOCKET;
@@ -22,10 +26,6 @@ SOCKET sock_server = INVALID_SOCKET;
 byte next_slot;
 byte slot_count;
 ServerSlot *slots;
-
-bool ServerIsActive() {
-	return sock_server != INVALID_SOCKET;
-}
 
 void GetAddressString(struct sockaddr *addr, char *out) {
 	union {
@@ -48,13 +48,13 @@ void GetAddressString(struct sockaddr *addr, char *out) {
 	Send/Receive functions
 */
 
-void ServerFreeSlot(int);	//Forward declaration
+void ServerDisconnectSlot(int);	//Forward declaration
 
-inline void ServerSend(int slot, const byte *buffer, uint16 count) {
-	if (slots[slot].socket != INVALID_SOCKET)
-		NetworkSend(slots[slot].socket, buffer, count);
-	else if (slots[slot].local)
-		ClientReceiveMessage(buffer);
+void ServerSend(int slot, const byte *buffer, uint16 length) {
+	if (slots[slot].local)
+		ClientReceiveMessage(buffer, length);
+	else if (slots[slot].socket != INVALID_SOCKET)
+		NetworkSend(slots[slot].socket, buffer, length);
 }
 
 void ServerBroadcast(const byte *buffer, uint16 count) {
@@ -64,15 +64,17 @@ void ServerBroadcast(const byte *buffer, uint16 count) {
 
 void ServerReceive(int id) {
 	if (slots[id].socket != INVALID_SOCKET) {
-		while (NetworkReceiveMsgBuffer(slots[id].socket, &slots[id].msg))
-			ServerReceiveMessage(slots[id].msg.buffer, id);
+		while (NetworkReceiveMsgBuffer(slots[id].socket, &slots[id].msg)) {
+			if (slots[id].msg.dynamic_buffer) {
+				ServerReceiveMessage(slots[id].msg.dynamic_buffer, slots[id].msg.length, id);
+				free(slots[id].msg.dynamic_buffer);
+			}
+			else
+				ServerReceiveMessage(slots[id].msg.buffer, slots[id].msg.length, id);
+		}
 
 		if (slots[id].msg.error) {
-			ServerFreeSlot(id);
-
-			char temp[64];
-			snprintf(temp, 64, "(TEMP) Kicking client cos error %d\n", slots[id].msg.error);
-			ConsolePrint(temp);
+			ServerDisconnectSlot(id);
 
 			byte message[] = { SVMSG_LEAVE, (byte)id, 0 };
 			ServerBroadcast(message, sizeof(message));
@@ -94,24 +96,48 @@ void ServerUpdateNextSlot() {
 		}
 }
 
+#include "Block.h"
+
 void ServerInitSlot(int id) {
-	byte message[MSG_LEN] = { SVMSG_SERVERINFO, slot_count };
-	ServerSend(id, message, 2);
+	static byte message[256];
+
+	message[0] = SVMSG_INFO;
+	message[1] = slot_count;
+	message[2] = id;
+	ServerSend(id, message, 3);
 
 	message[0] = SVMSG_NAME;
 	for (int i = 0; i < slot_count; ++i) {
 		if (LobbyGetClientName(i)[0] != '\0') {
 			message[1] = (byte)i;
 			strcpy_s(message + 2, MSG_LEN - 2, LobbyGetClientName(i));
-			ServerSend(id, message, strlen(message + 2) + 3);
+			ServerSend(id, message, (uint16)strlen(message + 2) + 3);
 		}
+	}
+
+	if (slots[id].local == false) {
+		SendServerDvars(id);
+		SendBlockInfo(id);
+
+		message[0] = SVMSG_START;
+		ServerSend(id, message, 1);
+
+		GameSendAllBoardData(id);
 	}
 }
 
-inline void ServerFreeSlot(int id) {
-	closesocket(slots[id].socket);
-	slots[id].socket = INVALID_SOCKET;
+void ServerDisconnectSlot(int id) {
+	if (slots[id].socket != INVALID_SOCKET) {
+		shutdown(slots[id].socket, SD_BOTH);
+		closesocket(slots[id].socket);
+		slots[id].socket = INVALID_SOCKET;
+	}
+	else
+		slots[id].local = false;
 
+	slots[id].admin = false;
+
+	free(slots[id].msg.dynamic_buffer);
 	ServerUpdateNextSlot();
 }
 
@@ -142,12 +168,28 @@ void ServerAcceptSocket(int id) {
 	Management
 */
 
-void StartServer() {
-	IFSERVER return;
+void StartLocalServer() {
+	if (sock_server != INVALID_SOCKET) return;
+
+	slot_count = 1;
+	slots = (ServerSlot*)malloc(sizeof(ServerSlot));
+
+	slots[0].local = true;
+	slots[0].admin = true;
+	slots[0].socket = INVALID_SOCKET;
+	slots[0].msg.dynamic_buffer = NULL;
+	ServerInitSlot(0);
+}
+
+void StartOnlineServer() {
+	if (sock_server != INVALID_SOCKET) return;
 
 	sock_server = NetworkCreateListenSocket(GetDvar("port")->value.string);
 
-	IFSERVER{
+	if (sock_server != INVALID_SOCKET) {
+		//If we're a local server, free slots
+		if (slots) free(slots);
+
 		slot_count = (int)GetDvar("playercount")->value.number;
 		if (slot_count < 1) slot_count = 1;
 
@@ -155,11 +197,15 @@ void StartServer() {
 
 		for (int i = 0; i < slot_count; ++i) {
 			slots[i].socket = INVALID_SOCKET;
+			slots[i].msg.dynamic_buffer = NULL;
+
 			slots[i].local = false;
 			slots[i].msg.bytes_left = 0;
+			slots[i].admin = false;
 		}
 
 		slots[0].local = true;
+		slots[0].admin = true;
 		ServerInitSlot(0);
 
 		MessageServerString(SVMSG_NAME, GetDvar("name")->value.string);
@@ -169,7 +215,7 @@ void StartServer() {
 }
 
 void ServerFrame() {
-	IFSERVER{
+	if (sock_server != INVALID_SOCKET) {
 		if (next_slot >= 0)
 			ServerAcceptSocket(next_slot);
 
@@ -181,9 +227,25 @@ void ServerFrame() {
 
 void StopServer() {
 	for (int i = 0; i < slot_count; ++i)
-		if (slots[i].socket != INVALID_SOCKET)
+		if (slots[i].socket != INVALID_SOCKET) {
+			shutdown(slots[i].socket, SD_BOTH);
 			closesocket(slots[i].socket);
+		}
 
-	closesocket(sock_server);
+	if (sock_server != INVALID_SOCKET) {
+		shutdown(sock_server, SD_BOTH);
+		closesocket(sock_server);
+		sock_server = INVALID_SOCKET;
+	}
+
 	free(slots);
+}
+
+void ServerSetAdmin(byte id) {
+	if (sock_server != INVALID_SOCKET && id < slot_count)
+		slots[id].admin = true;
+}
+
+bool ServerClientIsAdmin(byte id) {
+	return slots[id].admin;
 }

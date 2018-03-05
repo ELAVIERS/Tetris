@@ -13,6 +13,7 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <stdlib.h>
+#include <time.h>
 #include <Windows.h>
 
 /*
@@ -49,6 +50,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	NetworkingInit();
 	GameInit();
 	MenuInit();
+	StartLocalServer();
 	
 	ConsolePrint("Running config.cfg...\n");
 	RunConfig("config.cfg");
@@ -57,9 +59,8 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//
 	//Seed RNG
 	//
-	SYSTEMTIME st;
-	GetSystemTime(&st);
-	srand(st.wMilliseconds);
+	srand((unsigned)time(NULL));
+	rand();
 
 	//
 	//Start Game
@@ -82,6 +83,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//
 	//Close Game
 	//
+	WSACleanup();
 	G_Free();
 	FreeDvars();
 

@@ -27,8 +27,8 @@ typedef struct Board_s {
 	short x, y;
 	unsigned short width, height;
 
-	char **data;
-	unsigned short rows, columns;
+	byte **data;
+	byte rows, columns;
 
 	Block block;
 
@@ -37,16 +37,19 @@ typedef struct Board_s {
 
 void BoardCreate(Board*);
 void BoardFree(Board*);
-void BoardNewGame(Board*);
+void BoardClear(Board*);
 void BoardSetIDSize(Board*, float id_size);
+void BoardSubmitBlock(Board*);
+
+void BoardUseNextBlock(Board*);
 
 void BoardRender(const Board*);
 
 //Input functions
 bool BoardInputDown(Board*);
-void BoardInputX(Board*, int x);
-void BoardInputCCW(Board*);
-void BoardInputCW(Board*);
+bool BoardInputX(Board*, int x);
+bool BoardInputCCW(Board*);
+bool BoardInputCW(Board*);
 
 short TextureLevelIDIndex(char id);
 void UseNextTextureLevel();

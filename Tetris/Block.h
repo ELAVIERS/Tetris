@@ -1,8 +1,8 @@
 #pragma once
 #include "Dvar.h"
 #include "Quad.h"
+#include "Matrix.h"
 #include "Types.h"
-#include <stdbool.h>
 
 /*
 	Block.h
@@ -25,20 +25,21 @@
 */
 typedef struct Block_s {
 	char id;
-	unsigned short size;
-	bool *data;
+	byte size;
+	byte *data;
 	short x, y;
 } Block;
 
 /*
 	RenderBlock
 
-	block(in)			block to render
-	quad(in)			the quad used to render the blocks
-	x_offset, y_offset	the amount to offset the blocks positions in pixels
-	block w, block h	the size of a block
+	buffer				data to render
+	rows, columns		buffer dimensions
+	divsx, divsy		
+	transform			transformation to apply after block translation
+	quad				the quad to render tiles with
 */
-void RenderBlock(const Block *block, const Quad *quad, float x_offset, float y_offset, float block_w, float block_h);
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad);
 
 /*
 	BlockSetRandom
@@ -57,3 +58,6 @@ DFunc SVAddBlock;
 
 //sv_clear_blocks
 void ClearBlocks();
+
+//Sends commands to a player defining block info
+void SendBlockInfo(int playerid);

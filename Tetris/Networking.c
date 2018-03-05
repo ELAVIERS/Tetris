@@ -2,6 +2,7 @@
 #include "Console.h"
 #include "Messaging.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <Windows.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -144,9 +145,13 @@ SOCKET NetworkCreateListenSocket(const char *port) {
 	Receives data from a socket to a messagebuffer
 	returns true if any data was received
 */
-bool NetworkReceive(SOCKET connection, MessageBuffer *msg) {
+bool NetworkReceive(SOCKET connection, NetMessage *msg) {
 	static int readlen;
-	readlen = recv(connection, msg->buffer + msg->current_length, msg->bytes_left, 0);
+
+	if (msg->bytes_left > MSG_LEN)
+		readlen = recv(connection, msg->dynamic_buffer + msg->length, msg->bytes_left, 0);
+	else
+		readlen = recv(connection, msg->buffer + msg->length, msg->bytes_left, 0);
 		
 	if (readlen == SOCKET_ERROR) {
 		msg->error = WSAGetLastError();
@@ -159,7 +164,7 @@ bool NetworkReceive(SOCKET connection, MessageBuffer *msg) {
 		else msg->error = 0;
 	}
 	else if (readlen > 0) {
-		msg->current_length += readlen;
+		msg->length += readlen;
 		msg->bytes_left -= readlen;
 
 		return true;
@@ -174,12 +179,12 @@ bool NetworkReceive(SOCKET connection, MessageBuffer *msg) {
 	Receives message data from a socket to a messagebuffer
 	returns true if the message is complete
 */
-bool NetworkReceiveMsgBuffer(SOCKET connection, MessageBuffer *msg) {
+bool NetworkReceiveMsgBuffer(SOCKET connection, NetMessage *msg) {
 	msg->error = 0;
 
 	//If not currently reading a message..
 	if (msg->bytes_left == 0) {
-		msg->current_length = 0;
+		msg->length = 0;
 		msg->bytes_left = sizeof(uint16);
 
 		if (NetworkReceive(connection, msg)) {
@@ -192,8 +197,11 @@ bool NetworkReceiveMsgBuffer(SOCKET connection, MessageBuffer *msg) {
 				}
 			}
 
-			msg->bytes_left = BufferToUint16(msg->buffer);
-			msg->current_length = 0;
+			msg->bytes_left = BufferToInt16(msg->buffer);
+			msg->length = 0;
+
+			if (msg->bytes_left > MSG_LEN)
+				msg->dynamic_buffer = (byte*)malloc(msg->bytes_left);
 		}
 		else {
 			msg->bytes_left = 0;
@@ -214,7 +222,7 @@ void NetworkSend(SOCKET socket, const byte *data, uint16 size) {
 	static int err;
 
 	byte message_size_buffer[2];
-	Uint16ToBuffer(size, message_size_buffer);
+	Int16ToBuffer(size, message_size_buffer);
 
 	if (send(socket, message_size_buffer, 2, 0) == SOCKET_ERROR) {
 		err = WSAGetLastError();

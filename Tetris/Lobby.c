@@ -9,26 +9,65 @@
 #include <Windows.h>
 
 Client *clients = NULL;
-int client_count;
+int client_count = 0;
 
 HWND hwnd_lobby;
 HWND hwnd_clientlist;
 
-void LobbySetSize(int size) {
-	if (clients) {
-		for (int i = 0; i < client_count; ++i)
-			free(clients[i].name);
+void ClientListAddItems() {
+	LVITEM lvi;
+	lvi.mask = LVIF_TEXT | LVIF_STATE;
+	lvi.iSubItem = 0;
+	lvi.state = 0;
+	lvi.stateMask = 0;
 
-		free(clients);
+	for (int i = 0; i < client_count; ++i) {
+		lvi.iItem = i;
+		lvi.pszText = AllocStringFromInt(i);
+
+		if (ListView_InsertItem(hwnd_clientlist, &lvi) == -1) {
+			ConsolePrint("Listbox_InsertItem error\n");
+			return;
+		}
+
+		free(lvi.pszText);
+
+		ListView_SetItemText(hwnd_clientlist, i, 1, clients[i].name);
+	}
+}
+
+void LobbySetSize(int size) {
+	if (client_count > 1) {
+		for (int i = 1; i < client_count; ++i)
+			free(clients[i].name);
+		
+		if (size == 0)
+			free(clients[0].name);
 	}
 
-	if (client_count = size) {
-		clients = (Client*)malloc(client_count * sizeof(Client));
-		
-		for (int i = 0; i < size; ++i) {
-			clients[i].name = DupString("");
+	if (size > 0) {
+		client_count = size;
+
+		if (clients) {
+			clients = (Client*)realloc(clients, client_count * sizeof(Client));
+			for (int i = 1; i < client_count; ++i)
+				clients[i].name = DupString("");
+		}
+		else {
+			clients = (Client*)calloc(client_count, sizeof(Client));
+			for (int i = 0; i < client_count; ++i)
+				clients[i].name = DupString("");
+		}
+
+		if (hwnd_clientlist) {
+			ListView_DeleteAllItems(hwnd_clientlist);
+			ClientListAddItems();
 		}
 	}
+}
+
+int LobbyGetSize() {
+	return client_count;
 }
 
 void LobbySetClientName(byte id, const char *name) {
@@ -51,8 +90,7 @@ const char *LobbyGetClientName(byte id) {
 LRESULT CALLBACK LobbyProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	switch (msg) {
 	case WM_CREATE:
-		hwnd_clientlist = CreateWindowExA(WS_EX_CLIENTEDGE, WC_LISTVIEWA, NULL, LVS_REPORT | WS_CHILD | WS_VISIBLE, 16, 16, 196, 196, hwnd, NULL, GetModuleHandle(NULL), NULL);
-
+		hwnd_clientlist = CreateWindowExA(WS_EX_CLIENTEDGE, WC_LISTVIEWA, NULL, LVS_REPORT | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, GetModuleHandle(NULL), NULL);
 		break;
 
 	case WM_SIZE:
@@ -118,24 +156,6 @@ void LobbyShow() {
 
 		ListView_InsertColumn(hwnd_clientlist, 1, &lvc);
 
-		LVITEM lvi;
-		lvi.mask = LVIF_TEXT | LVIF_STATE;
-		lvi.iSubItem = 0;
-		lvi.state = 0;
-		lvi.stateMask = 0;
-
-		for (int i = 0; i < client_count; ++i) {
-			lvi.iItem = i;
-			lvi.pszText = AllocStringFromInt(i);
-
-			if (ListView_InsertItem(hwnd_clientlist, &lvi) == -1) {
-				ConsolePrint("Listbox_InsertItem error\n");
-				return;
-			}
-
-			ListView_SetItemText(hwnd_clientlist, i, 1, clients[i].name);
-
-			free(lvi.pszText);
-		}
+		ClientListAddItems();
 	}
 }

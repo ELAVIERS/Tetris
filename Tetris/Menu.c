@@ -101,6 +101,8 @@ Menu menus[MENU_COUNT];
 Menu *menuslot1 = menus + 0;
 Menu *menuslot2 = menus + 1;
 
+bool menu_sp;
+
 void MenuInit() {
 	Menu_Zero(menuslot1);
 	Menu_Zero(menuslot2);
@@ -114,13 +116,13 @@ char **modepaths;
 unsigned int mode_count;
 
 void play_startgame() {
-	RunConfig(modepaths[menuslot2->selected]);
+	SetDvarString(GetDvar("mode"), modepaths[menuslot2->selected]);
 
 	FreeTokens(modepaths, mode_count);
 	Menu_Free(menuslot1);
 	Menu_Free(menuslot2);
 
-	GameBegin(1);
+	GameBegin(menu_sp ? 1 : (int)GetDvar("playercount")->value.number);
 
 	g_paused = false;
 }
@@ -152,15 +154,8 @@ void CreateMenuSecondary_Play() {
 }
 
 void main_play() {
+	menu_sp = true;
 	CreateMenuSecondary_Play();
-}
-
-void main_connect() {
-	Client_OpenConnectionDialog();
-}
-
-void main_settings() {
-	SettingsOpen();
 }
 
 void main_quit() {
@@ -168,7 +163,17 @@ void main_quit() {
 }
 
 void main_host() {
-	StartServer();
+	StartOnlineServer();
+
+	menu_sp = false;
+	CreateMenuSecondary_Play();
+}
+
+void main_connect() {
+	Client_RunConnectionDialog();
+
+	if (IsRemoteClient())
+		Menu_Free(menuslot1);
 }
 
 void pause_restart() {
@@ -179,6 +184,14 @@ void pause_restart() {
 
 void pause_endgame() {
 	Menu_Free(menuslot1);
+
+	if (IsRemoteClient()) {
+		Client_Disconnect();
+	}
+	else {
+		StopServer();
+		StartLocalServer();
+	}
 
 	GameEnd();
 
@@ -193,7 +206,7 @@ void CreateMenu_Main() {
 	Menu_AddItem(menuslot1, "PLAY", main_play);
 	Menu_AddItem(menuslot1, "CONNECT", main_connect);
 	Menu_AddItem(menuslot1, "HOST", main_host);
-	Menu_AddItem(menuslot1, "SETTINGS", main_settings);
+	Menu_AddItem(menuslot1, "SETTINGS", SettingsOpen);
 	Menu_AddItem(menuslot1, "EXIT", main_quit);
 
 	g_paused = true;
@@ -205,8 +218,11 @@ void CreateMenu_Pause() {
 	menuslot1->closable = true;
 
 	Menu_AddItem(menuslot1, "RESTART", pause_restart);
-	Menu_AddItem(menuslot1, "MODE", main_play);
-	Menu_AddItem(menuslot1, "SETTINGS", main_settings);
+	
+	if (!IsRemoteClient())
+		Menu_AddItem(menuslot1, "MODE", CreateMenuSecondary_Play);
+	
+	Menu_AddItem(menuslot1, "SETTINGS", SettingsOpen);
 	Menu_AddItem(menuslot1, "MENU", pause_endgame);
 	Menu_AddItem(menuslot1, "EXIT", main_quit);
 
@@ -236,4 +252,9 @@ void Menus_Render() {
 
 	for (unsigned int i = 0; i < MENU_COUNT; ++i)
 		Menu_Render(menus + i);
+}
+
+void CloseAllMenus() {
+	for (unsigned int i = 0; i < MENU_COUNT; ++i)
+		Menu_Free(menus + i);
 }

@@ -36,7 +36,7 @@ bool RunConfig(const char *filepath) {
 				}
 			}
 
-			HandleCommand(tokens, count);
+			HandleCommandTokens(tokens, count);
 			FreeTokens(tokens, count);
 		}
 
@@ -81,7 +81,8 @@ void SaveCvars() {
 		char *value = DvarAllocValueString(node->dvar);
 
 		if (value) {
-			int index = size - 1;
+			int index = (int)size - 1;
+
 			size += strlen(node->dvar->name) + 1 + strlen(value) + 1;
 			buffer = (char*)realloc(buffer, size);
 

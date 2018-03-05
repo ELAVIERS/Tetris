@@ -6,8 +6,10 @@ typedef struct {
 	char* name;
 } Client;
 
+bool IsRemoteClient();
+
 void ClientFrame();
-void Client_OpenConnectionDialog();
+void Client_RunConnectionDialog();
 
 void Client_MessageServer(const byte *buffer, uint16 count);
 

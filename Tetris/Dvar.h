@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 
 typedef void DvarCallback(DvarValue);
 typedef void DFunc(const char **tokens, unsigned int count);
@@ -30,39 +31,49 @@ typedef struct Dvar_s {
 	DvarType type;
 	DvarValue value;
 	DvarCallback *callback;
+
+	bool server;
 } Dvar;
 
 //Dvar creation
-Dvar* AddDvarC(const char *name, DvarType, DvarValue, DvarCallback*);
+Dvar* AddDvarC(const char *name, DvarType, DvarValue, DvarCallback*, bool server);
 
-inline Dvar* AddDCallC(const char *name, void (*value)(), DvarCallback *callback) {
+inline Dvar* AddDCallC(const char *name, void (*value)(), DvarCallback *callback, bool server) {
 	DvarValue v = { .call = value };
-	return AddDvarC(name, DVT_CALL, v, callback);
+	return AddDvarC(name, DVT_CALL, v, callback, server);
 }
 
-inline Dvar* AddDFunctionC(const char *name, DFunc *value, DvarCallback *callback) {
+inline Dvar* AddDFunctionC(const char *name, DFunc *value, DvarCallback *callback, bool server) {
 	DvarValue v = { .function = value };
-	return AddDvarC(name, DVT_FUNCTION, v, callback);
+	return AddDvarC(name, DVT_FUNCTION, v, callback, server);
 }
 
-inline Dvar* AddDFloatC(const char *name, float value, DvarCallback *callback) {
+inline Dvar* AddDFloatC(const char *name, float value, DvarCallback *callback, bool server) {
 	DvarValue v = { .number = value };
-	return AddDvarC(name, DVT_FLOAT, v, callback);
+	return AddDvarC(name, DVT_FLOAT, v, callback, server);
 }
 
-inline Dvar* AddDStringC(const char *name, char *value, DvarCallback *callback) {
+inline Dvar* AddDStringC(const char *name, char *value, DvarCallback *callback, bool server) {
 	DvarValue v = { .string = value };
-	return AddDvarC(name, DVT_STRING, v, callback);
+	return AddDvarC(name, DVT_STRING, v, callback, server);
 }
 
-#define AddDCall(NAME, VALUE)		AddDCallC(NAME, VALUE, 0)
-#define AddDFunction(NAME, VALUE)	AddDFunctionC(NAME, VALUE, 0)
-#define AddDFloat(NAME, VALUE)		AddDFloatC(NAME, VALUE, 0)
-#define AddDString(NAME, VALUE)		AddDStringC(NAME, VALUE, 0)
+#define AddDCall(NAME, VALUE, SERVER)		AddDCallC(NAME, VALUE, 0, SERVER)
+#define AddDFunction(NAME, VALUE, SERVER)	AddDFunctionC(NAME, VALUE, 0, SERVER)
+#define AddDFloat(NAME, VALUE, SERVER)		AddDFloatC(NAME, VALUE, 0, SERVER)
+#define AddDString(NAME, VALUE, SERVER)		AddDStringC(NAME, VALUE, 0, SERVER)
 
 //Dvar retrieval
 Dvar* GetDvar(const char *name);
 char* DvarAllocValueString(const Dvar *dvar);
+
+/*
+	DvarGetCommandString
+
+	gets command string that would set dvar to its current value
+	returns length of string
+*/
+unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int dest_size);
 
 //
 void SetDvar(Dvar *dvar, DvarValue value);
@@ -77,8 +88,11 @@ inline void SetDvarString(Dvar *dvar, char *string) {
 
 //Dvar commands
 void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count);
-void HandleCommand(const char **tokens, unsigned int count);
+void HandleCommandTokens(const char **tokens, unsigned int count);
+void HandleCommandString(const char *command, bool message_server);
 
 ////
 void ListDvars();
 void FreeDvars();
+
+void SendServerDvars(int playerid);

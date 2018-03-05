@@ -2,12 +2,15 @@
 #include "Types.h"
 #include <stdbool.h>
 
-bool ServerIsActive();
-
-#define IFSERVER if(ServerIsActive())
-
-void StartServer();
+void StartLocalServer();
+void StartOnlineServer();
 void ServerFrame();
 void StopServer();
 
-void ServerBroadcast(const byte* buffer, uint16 size);
+void ServerDisconnectSlot(int id);
+
+void ServerSend(int id, const byte *buffer, uint16 size);
+void ServerBroadcast(const byte *buffer, uint16 size);
+
+void ServerSetAdmin(byte id);
+bool ServerClientIsAdmin(byte id);

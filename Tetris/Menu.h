@@ -11,3 +11,4 @@ void ActiveMenu_Close();
 void ActiveMenu_ChangeSelection(int amount);
 void ActiveMenu_Select();
 void Menus_Render();
+void CloseAllMenus();

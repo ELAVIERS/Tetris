@@ -1,99 +1,162 @@
 #include "Messaging.h"
 #include "Client.h"
 #include "Console.h"
+#include "Globals.h"
 #include "Lobby.h"
 #include "Server.h"
+#include "String.h"
 #include <stdio.h>
 #include <string.h>
 
-bool MessageBufferReady(MessageBuffer *msg) {
-	if (msg->bytes_left == 0) {
-		msg->bytes_left = (uint16)&msg->buffer[0];
-		msg->current_length += sizeof(uint16);
-	}
-
-	if (msg->current_length >= msg->bytes_left)
-		return true;
-
-	return false;
-}
-
-void MessageBufferRemoveMsg(MessageBuffer *msg) {
-	memcpy_s(msg->buffer, MSG_LEN, msg->buffer + msg->current_length, MSG_LEN - msg->current_length);
-	msg->current_length = 0;
+void MessageBufferRemoveMsg(NetMessage *msg) {
+	memcpy_s(msg->buffer, MSG_LEN, msg->buffer + msg->length, MSG_LEN - msg->length);
+	msg->length = 0;
 	msg->bytes_left = 0;
 }
 
-void MessageServer(const byte *message, unsigned int count) {
-	IFSERVER
-		ServerReceiveMessage(message, 0);
+void MessageServer(const byte *message, uint16 length) {
+	if (IsRemoteClient())
+		Client_MessageServer(message, length);
 	else
-		Client_MessageServer(message, count);
+		ServerReceiveMessage(message, length, 0);
 }
 
-void ServerReceiveMessage(const byte *message, byte playerid) {
-	static char full_buffer[MSG_LEN];
-	static char *buffer;
+void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
+	static char buffer[MSG_LEN];
 
-	full_buffer[0] = message[0];
-	buffer = full_buffer + 1;
-	++message;
+	buffer[0] = message[0];
 
-	switch (full_buffer[0]) {
+	switch (message[0]) {
+	case SVMSG_COMMAND:
+		if (ServerClientIsAdmin(playerid)) {
+			ServerBroadcast(message, strlen(message + 1) + 2);
+		}
+		else {
+			byte deny[] = { SVMSG_TEXT, SVTEXT_DENIED };
+			ServerSend(playerid, deny, sizeof(deny));
+		}
+		break;
+		
 	case SVMSG_NAME:
-	case SVMSG_TEXT:
-		buffer[0] = playerid;
-		strcpy_s(buffer + 1, MSG_LEN - 2, message);
-		ServerBroadcast(full_buffer, strlen(buffer + 1) + 3);
+	case SVMSG_CHAT:
+		buffer[1] = playerid;
+		strcpy_s(buffer + 2, MSG_LEN - 3, message + 1);
+		ServerBroadcast(buffer, (uint16)strlen(buffer + 2) + 3);
 		break;
+
 	case SVMSG_JOIN:
-		buffer[0] = playerid;
-		ServerBroadcast(full_buffer, 2);
+	case SVMSG_PLACE:
+	case SVMSG_CLEAR:
+		buffer[1] = playerid;
+		ServerBroadcast(buffer, 2);
 		break;
+
 	case SVMSG_LEAVE:
-		buffer[0] = playerid;
-		buffer[1] = message[0];
-		ServerBroadcast(full_buffer, 3);
+		ServerDisconnectSlot(playerid);
+		break;
+
+	case SVMSG_BLOCKPOS:
+		buffer[1] = playerid;
+		buffer[2] = message[1];
+		buffer[3] = message[2];
+		buffer[4] = message[3];
+		buffer[5] = message[4];
+		ServerBroadcast(buffer, 6);
+		break;
+
+	case SVMSG_BLOCKDATA:
+		buffer[1] = playerid;
+		buffer[2] = message[1];
+		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2] * buffer[2]);
+		ServerBroadcast(buffer, 3 + buffer[2] * buffer[2]);
+		break;
 	}
 }
 
-void ClientReceiveMessage(const byte *message) {
-	byte id = message[0];
-	++message;
-	
-	switch (id) {
-	case SVMSG_SERVERINFO:
-		LobbySetSize(message[0]);
+#include "Game.h"
+
+int currentid = 0;
+
+inline int ClientIDToBoardID(int id) {
+	if (id < currentid)
+		return id + 1;
+
+	if (id == currentid)
+		return 0;
+
+	return id;
+}
+
+void ClientReceiveMessage(const byte *message, uint16 length) {
+	switch (message[0]) {
+	case SVMSG_COMMAND:
+		HandleCommandString(message, false);
+		break;
+
+	case SVMSG_INFO:
+		LobbySetSize(message[1]);
+		currentid = message[2];
 		break;
 	case SVMSG_NAME:
-		if (LobbyGetClientName(message[0])[0] != '\0') {
-			ConsolePrint(LobbyGetClientName(message[0]));
+		if (LobbyGetClientName(message[1])[0] != '\0') {
+			ConsolePrint(LobbyGetClientName(message[1]));
 			ConsolePrint(" changed their name to ");
-			ConsolePrint(message + 1);
+			ConsolePrint(message + 2);
 			ConsolePrint("\n");
 		}
 
-		LobbySetClientName(message[0], message + 1);
+		LobbySetClientName(message[1], message + 2);
 
 		break;
+	case SVMSG_TEXT:
+		switch (message[1]) {
+		case SVTEXT_DENIED:
+			ConsolePrint("Access denied\n");
+			break;
+		}
+		break;
+
 	case SVMSG_JOIN:
-		ConsolePrint(LobbyGetClientName(message[0]));
+		ConsolePrint(LobbyGetClientName(message[1]));
 		ConsolePrint(" joined the server\n");
 		break;
-	case SVMSG_TEXT:
-		ConsolePrint(LobbyGetClientName(message[0]));
+	case SVMSG_CHAT:
+		ConsolePrint(LobbyGetClientName(message[1]));
 		ConsolePrint(" : ");
-		ConsolePrint(message + 1);
+		ConsolePrint(message + 2);
 		ConsolePrint("\n");
 		break;
 	case SVMSG_LEAVE:
-		ConsolePrint(LobbyGetClientName(message[0]));
-		if (message[1])
+		ConsolePrint(LobbyGetClientName(message[1]));
+		if (message[2])
 			ConsolePrint(" timed out\n");
 		else
 			ConsolePrint(" dipped\n");
 
-		LobbySetClientName(message[0], "");
+		LobbySetClientName(message[1], "");
+		GameBoardClear(ClientIDToBoardID(message[1]));
+		break;
+
+	case SVMSG_BLOCKPOS:
+		GameBoardSetBlockPos(ClientIDToBoardID(message[1]), BufferToInt16(message + 2), BufferToInt16(message + 4));
+		break;
+	case SVMSG_BLOCKDATA:
+		GameBoardSetBlockData(ClientIDToBoardID(message[1]), message[2], message + 3);
+		break;
+	case SVMSG_PLACE:
+		GameBoardPlaceBlock(ClientIDToBoardID(message[1]));
+		break;
+	case SVMSG_CLEAR:
+		GameBoardClear(ClientIDToBoardID(message[1]));
+		break;
+
+	case SVMSG_START:
+		GameBegin(LobbyGetSize());
+		g_paused = false;
+		break;
+
+	case SVMSG_BOARD:
+		GameReceiveBoardData(ClientIDToBoardID(message[1]), message + 2, length - 2);
 		break;
 	}
 }
@@ -104,7 +167,7 @@ void MessageServerString(MessageID id, const char *string) {
 
 	strcpy_s(buffer + 1, MSG_LEN - 1, string);
 
-	MessageServer(buffer, strlen(string) + 2);
+	MessageServer(buffer, (unsigned int)strlen(string) + 2);
 }
 
 void C_Name(DvarValue string) {
@@ -126,5 +189,5 @@ void CFunc_Send(const char **tokens, unsigned int count) {
 
 	message[current] = '\0';
 		
-	MessageServerString(SVMSG_TEXT, message);
+	MessageServerString(SVMSG_CHAT, message);
 }

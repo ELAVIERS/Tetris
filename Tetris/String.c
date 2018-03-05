@@ -44,8 +44,8 @@ unsigned int TakeLine(char dest[], const char *src, unsigned int count) {
 }
 
 char* AllocStringFromFloat(float value) {
-	char* string = (char*)malloc(13);
-	sprintf_s(string, 13, "%f", value);
+	char* string = (char*)malloc(46);
+	sprintf_s(string, 46, "%f", value);
 	return string;
 }
 
@@ -107,6 +107,31 @@ void FreeTokens(char **tokens, unsigned int count) {
 		free(tokens[i]);
 	
 	free(tokens);
+}
+
+char* CombineTokens(const char **tokens, unsigned int count) {
+	char *string;
+	unsigned int string_size = 0;
+
+	for (unsigned int i = 0; i < count; ++i)
+		string_size += strlen(tokens[i]);
+
+	string_size += count;
+
+	string = (char*)malloc(string_size);
+
+	unsigned int token = 0;
+	unsigned int i = 0;
+	while (i < string_size) {
+		for (const char *c = tokens[token++]; *c != '\0'; ++c)
+			string[i++] = *c;
+
+		string[i++] = ' ';
+	}
+
+	string[i - 1] = '\0';
+
+	return string;
 }
 
 char* SeperateDir(const char *filepath) {
