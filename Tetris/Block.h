@@ -2,6 +2,7 @@
 #include "Dvar.h"
 #include "Quad.h"
 #include "Matrix.h"
+#include "Texture.h"
 #include "Types.h"
 
 /*
@@ -38,8 +39,9 @@ typedef struct Block_s {
 	divsx, divsy		
 	transform			transformation to apply after block translation
 	quad				the quad to render tiles with
+	uv_offset			offsets for correcting uv coordinates
 */
-void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad);
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad, float uv_offset[2]);
 
 /*
 	BlockSetRandom

@@ -74,6 +74,7 @@ void ClientFrame() {
 			if (clientmsg.dynamic_buffer) {
 				ClientReceiveMessage(clientmsg.dynamic_buffer, clientmsg.length);
 				free(clientmsg.dynamic_buffer);
+				clientmsg.dynamic_buffer = NULL;
 			}
 			else
 				ClientReceiveMessage(clientmsg.buffer, clientmsg.length);

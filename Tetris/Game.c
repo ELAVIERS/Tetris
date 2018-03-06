@@ -173,6 +173,9 @@ void C_CLBlockIDSize(DvarValue number) {
 }
 
 void GameBegin(int playercount) {
+	CloseAllMenus();
+	g_paused = false;
+
 	if (board_count)
 		GameEnd();
 
@@ -203,6 +206,11 @@ void GameBegin(int playercount) {
 	RECT size;
 	GetClientRect(g_hwnd, &size);
 	GameSizeUpdate((unsigned short)size.right, (unsigned short)size.bottom);
+
+	if (IsRemoteClient()) {
+		byte message = SVMSG_REQUEST;
+		MessageServer(&message, 1);
+	}
 }
 
 void GameRestart() {
@@ -224,36 +232,41 @@ void GameEnd() {
 	board_count = 0;
 }
 
-inline unsigned short BoardWidth(const Board *board, unsigned short h) { return (unsigned short)((float)h / (float)board->rows) * board->columns; }
+#define GAP 16
 
 void GameSizeUpdate(unsigned short w, unsigned short h) {
 	if (board_count == 0)
 		return;
 
-	if (board_count == 1) {
-		boards[0].height = h;
-		boards[0].width = BoardWidth(boards, h);
-		boards[0].x = (w / 2) - (boards[0].width / 2);
-		boards[0].y = 0;
+	unsigned short board_width = ((float)h / (float)boards[0].rows) * boards[0].columns;;
+	unsigned short board_height;
+	unsigned short x = 0, y;
+	int gap;
+
+	if (board_width * board_count + GAP * (board_count - 1) > w) {
+		board_width = (w - (GAP * (board_count - 1))) / board_count;
+		board_height = board_width * (boards[0].rows / boards[0].columns);
+		y = (h - board_height) / 2;
+		gap = board_width + GAP;
 	}
 	else {
-		int gap, start_x;
+		board_height = h;
+		y = 0;
 
-		for (unsigned int i = 0; i < board_count; ++i) {
-			boards[i].height = h;
-			boards[i].width = BoardWidth(boards + i, h);
-			boards[i].y = 0;
-
-			if (i == 0) {
-				boards[i].x = 0;
-				gap = (w - (boards[0].width / 2) - (BoardWidth(boards + board_count - 1, h)) / 2) / (board_count - 1);
-				start_x = boards[0].width / 2;
-			}
-			else if (i == board_count - 1)
-				boards[i].x = w - boards[i].width;
-			else
-				boards[i].x = start_x + (gap * i) - (boards[i].width / 2);
+		if (board_count == 1) {
+			gap = 0;
+			x = w / 2 - board_width / 2;
 		}
+		else {
+			gap = (w - (boards[0].width / 2) - board_width / 2) / (board_count - 1);
+		}
+	}
+
+	for (unsigned int i = 0; i < board_count; ++i) {
+		boards[i].width = board_width;
+		boards[i].height = board_height;
+		boards[i].x = x + gap * i;
+		boards[i].y = y;
 	}
 }
 

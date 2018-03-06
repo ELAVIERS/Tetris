@@ -110,12 +110,14 @@ typedef enum MessageID_e {
 
 	SVMSG_START,
 
-	SVMSG_BOARD
+	SVMSG_BOARD,
 	/*
 		CLIENT
 			1:PLAYER ID (BYTE)
 			2:BOARD DATA (BYTE ARRAY)
 	*/
+
+	SVMSG_REQUEST
 } MessageID;
 
 void MessageServer(const byte *data, uint16 length);

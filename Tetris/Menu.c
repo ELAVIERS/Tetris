@@ -93,6 +93,7 @@ void Menu_Render(const Menu* menu) {
 #include "Game.h"
 #include "Globals.h"
 #include "IO.h"
+#include "Messaging.h"
 #include "Server.h"
 #include "Settings.h"
 
@@ -100,8 +101,6 @@ void Menu_Render(const Menu* menu) {
 Menu menus[MENU_COUNT];
 Menu *menuslot1 = menus + 0;
 Menu *menuslot2 = menus + 1;
-
-bool menu_sp;
 
 void MenuInit() {
 	Menu_Zero(menuslot1);
@@ -116,15 +115,14 @@ char **modepaths;
 unsigned int mode_count;
 
 void play_startgame() {
-	SetDvarString(GetDvar("mode"), modepaths[menuslot2->selected]);
+	RunConfig(modepaths[menuslot2->selected]);
 
 	FreeTokens(modepaths, mode_count);
 	Menu_Free(menuslot1);
 	Menu_Free(menuslot2);
 
-	GameBegin(menu_sp ? 1 : (int)GetDvar("playercount")->value.number);
-
-	g_paused = false;
+	byte message = SVMSG_START;
+	ServerBroadcast(&message, 1);
 }
 
 void CreateMenuSecondary_Play() {
@@ -153,11 +151,6 @@ void CreateMenuSecondary_Play() {
 	}
 }
 
-void main_play() {
-	menu_sp = true;
-	CreateMenuSecondary_Play();
-}
-
 void main_quit() {
 	g_running = false;
 }
@@ -165,7 +158,6 @@ void main_quit() {
 void main_host() {
 	StartOnlineServer();
 
-	menu_sp = false;
 	CreateMenuSecondary_Play();
 }
 
@@ -203,7 +195,7 @@ void CreateMenu_Main() {
 	menuslot1->selected = 0;
 	menuslot1->closable = false;
 
-	Menu_AddItem(menuslot1, "PLAY", main_play);
+	Menu_AddItem(menuslot1, "PLAY", CreateMenuSecondary_Play);
 	Menu_AddItem(menuslot1, "CONNECT", main_connect);
 	Menu_AddItem(menuslot1, "HOST", main_host);
 	Menu_AddItem(menuslot1, "SETTINGS", SettingsOpen);

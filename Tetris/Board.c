@@ -134,20 +134,22 @@ void BoardRender(const Board *board) {
 
 	glBindTexture(GL_TEXTURE_2D, tex_blocks.glid);
 
-	float block_w = (float)(int)((float)board->width / (float)board->columns);
-	float block_h = (float)(int)((float)board->height / (float)board->rows);
+	float block_w = (float)((float)board->width / (float)board->columns);
+	float block_h = (float)((float)board->height / (float)board->rows);
+
+	float uvoffset[2] = {0.f, 0.001f / tex_blocks.height}; //stupid but it works
 
 	Mat3Identity(transform);
 	Mat3Scale(transform, block_w, block_h);
 	Mat3Translate(transform, board->x, board->y);
 
-	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks);
+	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks, uvoffset);
 
 	Mat3Identity(transform);
 	Mat3Scale(transform, block_w, block_h);
 	Mat3Translate(transform, board->x + (board->block.x * block_w), board->y + (board->block.y * block_h));
 
-	RenderTileBuffer(board->block.data, board->block.size, board->block.size, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks);
+	RenderTileBuffer(board->block.data, board->block.size, board->block.size, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks, uvoffset);
 }
 
 //Input

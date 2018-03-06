@@ -68,7 +68,7 @@ void BlockRotateCW(Block *block) {
 	BlockDataFlipColumns(block->data, block->size);
 }
 
-void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad) {
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, byte divsy, Mat3 in_transform, const Quad* quad, float uv_offset[2]) {
 	Mat3 transform;
 
 	for (unsigned int r = 0; r < rows; ++r)
@@ -81,7 +81,7 @@ void RenderTileBuffer(const byte *buffer, byte rows, byte columns, byte divsx, b
 
 				short index = TextureLevelIDIndex(buffer[RC1D(columns, r, c)]);
 				glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"),
-					(float)(index % divsx) / (float)divsx, (float)(index / divsx) / (float)divsy);
+					(float)(index % divsx) / (float)divsx + uv_offset[0] , (float)(index / divsx) / (float)divsy + uv_offset[1]);
 
 				QuadRender(quad);
 			};

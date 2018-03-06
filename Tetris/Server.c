@@ -121,8 +121,6 @@ void ServerInitSlot(int id) {
 
 		message[0] = SVMSG_START;
 		ServerSend(id, message, 1);
-
-		GameSendAllBoardData(id);
 	}
 }
 
@@ -184,13 +182,13 @@ void StartLocalServer() {
 void StartOnlineServer() {
 	if (sock_server != INVALID_SOCKET) return;
 
-	sock_server = NetworkCreateListenSocket(GetDvar("port")->value.string);
+	sock_server = NetworkCreateListenSocket(GetDvar("sv_port")->value.string);
 
 	if (sock_server != INVALID_SOCKET) {
 		//If we're a local server, free slots
 		if (slots) free(slots);
 
-		slot_count = (int)GetDvar("playercount")->value.number;
+		slot_count = (int)GetDvar("sv_playercount")->value.number;
 		if (slot_count < 1) slot_count = 1;
 
 		slots = (ServerSlot*)malloc(slot_count * sizeof(ServerSlot));

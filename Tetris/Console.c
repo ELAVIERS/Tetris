@@ -231,15 +231,13 @@ void ConsoleInit() {
 	AddDFunction(	"bindaxis",					BindAxis,		false);
 	AddDCall(		"clear_binds",				ClearBinds,		false);
 
-	AddDFloat(		"playercount",				4,				true);
-	AddDString(		"port",						"7777",			true);
+	AddDFloat(		"sv_playercount",			4,				true);
+	AddDString(		"sv_port",					"7777",			true);
 
 	AddDFunction(	"sv_blocks_add",			SVAddBlock,		true);
 	AddDCall(		"sv_blocks_clear",			ClearBlocks,	true);
 	AddDFloat(		"sv_board_width",			10,				true);
 	AddDFloat(		"sv_board_height",			20,				true);
-	
-	AddDStringC(	"mode",						"", C_RunAsConfig, false);
 
 	AddDStringC(	"cl_font_texture",			"",	C_CLFontTexture, false);
 	AddDFloatC(		"cl_fontid_size",			0, C_CLFontIDSize, false);

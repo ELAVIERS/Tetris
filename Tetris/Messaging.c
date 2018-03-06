@@ -1,6 +1,7 @@
 #include "Messaging.h"
 #include "Client.h"
 #include "Console.h"
+#include "Game.h"
 #include "Globals.h"
 #include "Lobby.h"
 #include "Server.h"
@@ -70,10 +71,12 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2] * buffer[2]);
 		ServerBroadcast(buffer, 3 + buffer[2] * buffer[2]);
 		break;
+
+	case SVMSG_REQUEST:
+		GameSendAllBoardData(playerid);
+		break;
 	}
 }
-
-#include "Game.h"
 
 int currentid = 0;
 
@@ -152,7 +155,6 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 
 	case SVMSG_START:
 		GameBegin(LobbyGetSize());
-		g_paused = false;
 		break;
 
 	case SVMSG_BOARD:
