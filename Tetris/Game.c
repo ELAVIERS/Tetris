@@ -14,16 +14,26 @@
 #include <stdlib.h>
 #include <Windows.h>
 
+float blockid_size;
+
+Quad bgquad;
+Mat3 bg_projection;
+float bg_offset[2];
+
 Board *boards;
 unsigned int board_count = 0;
 
 GLuint shader, textshader;
 
 float *sv_gravity, *sv_drop_gravity, *sv_autorepeat_delay, *sv_autorepeat;
-
 float *axis_x, *axis_down;
+float *cl_gap;
 
 void GameInputDrop(), GameInputCCW(), GameInputCW(), C_CLBlockIDSize(DvarValue);
+
+void C_CLGap(DvarValue value) {
+	GameSizeUpdate(0, 0);
+}
 
 void GameInit() {
 	HINSTANCE instance = GetModuleHandle(NULL);
@@ -36,6 +46,11 @@ void GameInit() {
 		ErrorMessage("Would you care to explain as to why the shaders don't exist mate?");
 		return;
 	}
+
+	QuadCreate(&bgquad);
+	Mat3Identity(bg_projection);
+	Mat3Scale(bg_projection, 2, 2);
+	Mat3Translate(bg_projection, -1, -1);
 
 	shader = CreateShaderProgram(frag_src, vert_src);
 	textshader = CreateShaderProgram(text_frag_src, vert_src);
@@ -54,7 +69,7 @@ void GameInit() {
 
 	AddDCall("dbg_next_texture_level", UseNextTextureLevel, false);
 
-	AddDFloatC("cl_blockid_size", 0, C_CLBlockIDSize, false);
+	cl_gap = &AddDFloatC("cl_gap", 0.f, C_CLGap, false)->value.number;
 }
 
 void SendPosMessage(int16 x, int16 y) {
@@ -148,6 +163,15 @@ void GameRender() {
 
 	if (board_count) {
 		UseGLProgram(shader);
+		ShaderSetUniformMat3(shader, "u_projection", bg_projection);
+		ShaderSetUniformMat3(shader, "u_transform", g_mat3_identity);
+
+		if (g_textures[TEX_BG].glid) {
+			ShaderSetUniformVec2(shader, "u_uvoffset", bg_offset);
+			glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BG].glid);
+			QuadRender(&bgquad);
+		}
+
 		ShaderSetUniformMat3(shader, "u_projection", g_projection);
 
 		for (unsigned int i = 0; i < board_count; ++i)
@@ -163,13 +187,11 @@ void GameRender() {
 
 /////////
 
-inline void GameSetBoardIDSize(float id_size) {
-	for (unsigned int i = 0; i < board_count; ++i)
-		BoardSetIDSize(boards + i, id_size);
-}
+void GameSetBlockIDSize(float id_size) {
+	blockid_size = id_size;
 
-void C_CLBlockIDSize(DvarValue number) {
-	GameSetBoardIDSize(number.number);
+	for (unsigned int i = 0; i < board_count; ++i)
+		BoardSetIDSize(boards + i, blockid_size);
 }
 
 void GameBegin(int playercount) {
@@ -184,7 +206,6 @@ void GameBegin(int playercount) {
 
 	byte rows = (byte)GetDvar("sv_board_height")->value.number;
 	byte columns = (byte)GetDvar("sv_board_width")->value.number;
-	float id_size = GetDvar("cl_blockid_size")->value.number;
 
 	for (unsigned int i = 0; i < board_count; ++i) {
 		boards[i].rows = rows;
@@ -192,10 +213,7 @@ void GameBegin(int playercount) {
 
 		BoardCreate(boards + i);
 		BoardClear(boards + i);
-		BoardSetIDSize(boards + i, id_size);
-
-		boards[i].block.size = 0;
-		boards[i].block.data = NULL;
+		BoardSetIDSize(boards + i, blockid_size);
 	}
 
 	BoardUseNextBlock(boards + 0);
@@ -232,34 +250,41 @@ void GameEnd() {
 	board_count = 0;
 }
 
-#define GAP 16
-
 void GameSizeUpdate(unsigned short w, unsigned short h) {
 	if (board_count == 0)
 		return;
 
-	unsigned short board_width = ((float)h / (float)boards[0].rows) * boards[0].columns;;
+	if (w == 0) {
+		RECT rect;
+		GetClientRect(g_hwnd, &rect);
+		w = rect.right;
+		h = rect.bottom;
+	}
+
+	unsigned short rows = boards[0].rows + (g_drawborder ? 2 : 0);
+	unsigned short columns = boards[0].columns + (g_drawborder ? 2 : 0);
+
+	unsigned short board_width = h * (float)columns / (float)rows;
 	unsigned short board_height;
 	unsigned short x = 0, y;
 	int gap;
 
-	if (board_width * board_count + GAP * (board_count - 1) > w) {
-		board_width = (w - (GAP * (board_count - 1))) / board_count;
-		board_height = board_width * (boards[0].rows / boards[0].columns);
+	if (board_width * board_count + *cl_gap * (board_count - 1) > w) {
+		board_width = (w - (*cl_gap * (board_count - 1))) / board_count;
+		board_height = board_width * ((float)rows / (float)columns);
 		y = (h - board_height) / 2;
-		gap = board_width + GAP;
+		gap = board_width + *cl_gap;
 	}
 	else {
 		board_height = h;
 		y = 0;
 
 		if (board_count == 1) {
-			gap = 0;
 			x = w / 2 - board_width / 2;
+			gap = 0;
 		}
-		else {
-			gap = (w - (boards[0].width / 2) - board_width / 2) / (board_count - 1);
-		}
+		else
+			gap = board_width + (w - board_width * board_count) / (board_count - 1);
 	}
 
 	for (unsigned int i = 0; i < board_count; ++i) {
@@ -268,12 +293,21 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 		boards[i].x = x + gap * i;
 		boards[i].y = y;
 	}
+
+	float u = (float)w / (float)g_textures[TEX_BG].width * 8.f / ((float)board_width / (float)columns);
+
+	QuadSetData(&bgquad,
+		u,
+		(float)h / (float)g_textures[TEX_BG].height * 8.f / ((float)board_height / (float)rows));
+
+	bg_offset[0] = -1.f * ((float)x / (float)w) * u;
+	bg_offset[1] = 0.f;
 }
 
 void GameInputDrop() {
-	signed short lastx, lasty;
+	if (board_count && !g_paused) {
+		signed short lastx, lasty;
 
-	if (board_count) {
 		do {
 			lastx = boards[0].block.x;
 			lasty = boards[0].block.y;
@@ -285,14 +319,17 @@ void GameInputDrop() {
 }
 
 void GameInputCW() {
-	if (board_count && BoardInputCW(boards + 0))
+	if (board_count && !g_paused && BoardInputCW(boards + 0))
 		SendBlockDataMessage();
 }
 
 void GameInputCCW() {
-	if (board_count && BoardInputCCW(boards + 0))
+	if (board_count && !g_paused && BoardInputCCW(boards + 0))
 		SendBlockDataMessage();
 }
+
+
+//Net
 
 void GameBoardSetBlockPos(int id, signed short x, signed short y) {
 	if (id == 0 || board_count == 0) return;

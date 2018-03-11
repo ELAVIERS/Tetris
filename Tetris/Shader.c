@@ -82,6 +82,10 @@ void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data) {
 	glUniformMatrix3fv(ShaderGetLocation(program, name), 1, GL_FALSE, &data[0][0]);
 }
 
-void ShaderSetUniformVec3(GLuint program, const char *name, const float *data) {
+void ShaderSetUniformVec3(GLuint program, const char *name, const float data[3]) {
 	glUniform3f(ShaderGetLocation(program, name), data[0], data[1], data[2]);
+}
+
+void ShaderSetUniformVec2(GLuint program, const char *name, const float data[2]) {
+	glUniform2f(ShaderGetLocation(program, name), data[0], data[1]);
 }

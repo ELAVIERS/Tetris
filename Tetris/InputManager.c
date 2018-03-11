@@ -168,26 +168,24 @@ void KeyDown(WORD vk) {
 	}
 
 	if (!g_paused) {
-		if (vk == VK_ESCAPE) {
+		if (vk == VK_ESCAPE)
 			CreateMenu_Pause();
-			return;
-		}
 	}
 	else {
 		switch (vk) {
 		case VK_ESCAPE:
 			ActiveMenu_Close();
-			return;
+			break;
 
 		case VK_UP:
 			ActiveMenu_ChangeSelection(1);
-			return;
+			break;
 		case VK_DOWN:
 			ActiveMenu_ChangeSelection(-1);
-			return;
+			break;
 		case VK_RETURN:
 			ActiveMenu_Select();
-			return;
+			break;
 		}
 	}
 
@@ -206,10 +204,9 @@ void KeyDown(WORD vk) {
 }
 
 void KeyUp(WORD vk) {
-	if (!g_paused)
-		for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
-			if (bind->key == vk && bind->data.type == BIND_AXIS)
-				SetDvarFloat(bind->dvar, bind->dvar->value.number - bind->data.axisvalue);
+	for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
+		if (bind->key == vk && bind->data.type == BIND_AXIS)
+			SetDvarFloat(bind->dvar, bind->dvar->value.number - bind->data.axisvalue);
 }
 
 #include <stdio.h>

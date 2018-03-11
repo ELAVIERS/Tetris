@@ -21,7 +21,7 @@
 
 	block			the current block
 
-	quad_blocks		the quad to be used when rendering the board
+	quad		the quad to be used when rendering the board
 */
 typedef struct Board_s {
 	short x, y;
@@ -32,7 +32,7 @@ typedef struct Board_s {
 
 	Block block;
 
-	Quad quad_blocks;
+	Quad quad;
 } Board;
 
 void BoardCreate(Board*);

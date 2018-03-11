@@ -8,6 +8,8 @@
 
 typedef float Mat3[3][3];
 
+extern Mat3 g_mat3_identity;
+
 void Mat3Multiply(Mat3 a, const Mat3 b);
 
 void Mat3Identity(Mat3 out);

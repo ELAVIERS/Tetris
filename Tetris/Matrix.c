@@ -1,6 +1,12 @@
 #include "Matrix.h"
 #include <stdlib.h>
 
+Mat3 g_mat3_identity = {
+	1.f, 0.f, 0.f,
+	0.f, 1.f, 0.f,
+	0.f, 0.f, 1.f
+};
+
 #define MATDOT(A, B, R, C) A[R][0] * B[0][C] + A[R][1] * B[1][C] + A[R][2] * B[2][C]
 
 void Mat3Multiply(Mat3 a, const Mat3 b) {

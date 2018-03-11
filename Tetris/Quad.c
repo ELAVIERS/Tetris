@@ -8,14 +8,14 @@ void QuadCreate(Quad *quad) {
 	glGenBuffers(1, &quad->vbo);
 }
 
-void QuadSetData(Quad *quad, float uvx, float uvy) {
+void QuadSetData(Quad *quad, float uvw, float uvh) {
 	Vertex_2P_2UV verts[6] = {
 		0, 0, 0,	0,
-		1, 0, uvx,	0,
-		0, 1, 0,	uvy,
-		1, 1, uvx,	uvy,
-		0, 1, 0,	uvy,
-		1, 0, uvx,	0
+		1, 0, uvw,	0,
+		0, 1, 0,	uvh,
+		1, 1, uvw,	uvh,
+		0, 1, 0,	uvh,
+		1, 0, uvw,	0
 	};
 
 	glBindVertexArray(quad->vao);

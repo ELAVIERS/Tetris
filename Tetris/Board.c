@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-Texture tex_blocks;
 unsigned short tex_blocks_divx, tex_blocks_divy;
 
 typedef struct {
@@ -38,11 +37,14 @@ void BoardCreate(Board *board) {
 	for (int i = 0; i < board->rows; ++i)
 		board->data[i] = data_block + (i * board->columns);
 
-	QuadCreate(&board->quad_blocks);
+	QuadCreate(&board->quad);
+
+	board->block.size = 0;
+	board->block.data = NULL;
 }
 
 void BoardFree(Board *board) {
-	QuadDelete(&board->quad_blocks);
+	QuadDelete(&board->quad);
 
 	free(&board->data[0][0]);
 	free(board->data);
@@ -55,10 +57,12 @@ void BoardClear(Board *board) {
 }
 
 void BoardSetIDSize(Board *board, float id_size) {
-	QuadSetData(&board->quad_blocks, id_size / (float)tex_blocks.width, id_size / (float)tex_blocks.height);
+	Texture* tex_block = g_textures + TEX_BLOCK;
 
-	tex_blocks_divx = tex_blocks.width / (unsigned short)id_size;
-	tex_blocks_divy = tex_blocks.height / (unsigned short)id_size;
+	QuadSetData(&board->quad, id_size / (float)tex_block->width, id_size / (float)tex_block->height);
+
+	tex_blocks_divx = tex_block->width / (unsigned short)id_size;
+	tex_blocks_divy = tex_block->height / (unsigned short)id_size;
 }
 
 inline void ClearRow(Board *board, unsigned int row) {
@@ -122,34 +126,82 @@ short TextureLevelIDIndex(char id) {
 	return -1;
 }
 
+inline void RenderEdgePart(Mat3 transform, int id) {
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	glBindTexture(GL_TEXTURE_2D, g_textures[id].glid);
+	QuadRender(&g_defquad);
+}
+
+void BoardRenderBorder(const Board *board, float bw, float bh) {
+	Mat3 transform;
+	float w = bw * (board->columns + 1);
+	float h = bh * (board->rows + 1);
+	
+	Mat3Identity(transform);
+	Mat3Scale(transform, bw, bh);
+	Mat3Translate(transform, board->x, board->y);
+	RenderEdgePart(transform, TEX_BL);
+
+	Mat3Translate(transform, 0, h);
+	RenderEdgePart(transform, TEX_UL);
+
+	Mat3Translate(transform, w, 0);
+	RenderEdgePart(transform, TEX_UR);
+
+	Mat3Translate(transform, 0, -h);
+	RenderEdgePart(transform, TEX_BR);
+
+	//Horizontal edges
+	Mat3Identity(transform);
+	Mat3Scale(transform, w - bw, bh);
+	Mat3Translate(transform, board->x + bw, board->y);
+	RenderEdgePart(transform, TEX_B);
+
+	Mat3Translate(transform, 0.f, h);
+	RenderEdgePart(transform, TEX_U);
+
+	//Vertical Edges
+	Mat3Identity(transform);
+	Mat3Scale(transform, bw, h - bh);
+	Mat3Translate(transform, board->x, board->y + bh);
+	RenderEdgePart(transform, TEX_L);
+
+	Mat3Translate(transform, w, 0.f);
+	RenderEdgePart(transform, TEX_R);
+}
+
 void BoardRender(const Board *board) {
 	Mat3 transform;
+	float block_w = (float)board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
+	float block_h = (float)board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+
+	float x = board->x + (g_drawborder ? block_w : 0.f);
+	float y = board->y + (g_drawborder ? block_h : 0.f);
+	float w = block_w * board->columns;
+	float h = block_h * board->rows;
 	
-	glBindTexture(GL_TEXTURE_2D, 0);
+	float uvoffset[2] = { 0.f, 0.001f / g_textures[TEX_BLOCK].height }; //stupid but it works
+
+	glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"), 0.f, 0.f);
+
 	Mat3Identity(transform);
-	Mat3Scale(transform, board->width, board->height);
-	Mat3Translate(transform, board->x, board->y);
+	Mat3Scale(transform, w, h);
+	Mat3Translate(transform, x, y);
 	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-	QuadRender(&board->quad_blocks);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	QuadRender(&board->quad);
 
-	glBindTexture(GL_TEXTURE_2D, tex_blocks.glid);
-
-	float block_w = (float)((float)board->width / (float)board->columns);
-	float block_h = (float)((float)board->height / (float)board->rows);
-
-	float uvoffset[2] = {0.f, 0.001f / tex_blocks.height}; //stupid but it works
+	if (g_drawborder)
+		BoardRenderBorder(board, block_w, block_h);
 
 	Mat3Identity(transform);
 	Mat3Scale(transform, block_w, block_h);
-	Mat3Translate(transform, board->x, board->y);
+	Mat3Translate(transform, x, y);
+	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
+	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, tex_blocks_divx, tex_blocks_divy, transform, &board->quad, uvoffset);
 
-	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks, uvoffset);
-
-	Mat3Identity(transform);
-	Mat3Scale(transform, block_w, block_h);
-	Mat3Translate(transform, board->x + (board->block.x * block_w), board->y + (board->block.y * block_h));
-
-	RenderTileBuffer(board->block.data, board->block.size, board->block.size, tex_blocks_divx, tex_blocks_divy, transform, &board->quad_blocks, uvoffset);
+	Mat3Translate(transform, board->block.x * block_w, board->block.y * block_h);
+	RenderTileBuffer(board->block.data, board->block.size, board->block.size, tex_blocks_divx, tex_blocks_divy, transform, &board->quad, uvoffset);
 }
 
 //Input
@@ -270,5 +322,5 @@ void ClearTextureLevels() {
 }
 
 void C_CLBlockTexture(DvarValue string) {
-	TextureFromFile(string.string, &tex_blocks);
+	TextureFromFile(string.string, g_textures + TEX_BLOCK);
 }

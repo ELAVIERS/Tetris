@@ -182,7 +182,7 @@ void ConsolePrint(const char *string) {
 }
 
 void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
-DFunc Console_Admin, Console_Run;
+DFunc Console_Admin, Console_Run, Console_Size;
 
 void ConsoleInit() {
 	ConsoleResetBuffer();
@@ -210,7 +210,7 @@ void ConsoleInit() {
 	////
 	//Config Variables
 	////
-	AddCvar(AddDStringC("cfg_texture", "", C_RunAsConfig, false));
+	AddCvar(AddDStringC("cfg_texture", "", C_CFGTexture, false));
 
 	AddCvar(AddDStringC("name", "Player", C_Name, false));
 
@@ -226,6 +226,7 @@ void ConsoleInit() {
 	AddDCall(		"list",						Console_List,	false);
 	AddDCall(		"save",						Console_Save,	false);
 	AddDFunction(	"say",						CFunc_Send,		false);
+	AddDFunction(	"size",						Console_Size,	false);
 
 	AddDFunction(	"bind",						Bind,			false);
 	AddDFunction(	"bindaxis",					BindAxis,		false);
@@ -239,20 +240,25 @@ void ConsoleInit() {
 	AddDFloat(		"sv_board_width",			10,				true);
 	AddDFloat(		"sv_board_height",			20,				true);
 
-	AddDStringC(	"cl_font_texture",			"",	C_CLFontTexture, false);
-	AddDFloatC(		"cl_fontid_size",			0, C_CLFontIDSize, false);
-	AddDStringC(	"cl_menu_font_texture",		"", C_CLMenuFontTexture, false);
-	AddDFloatC(		"cl_menu_fontid_size",		0, C_CLMenuFontIDSize, false);
-	AddDStringC(	"cl_block_texture",			"", C_CLBlockTexture, false);
+	AddDFunction(	"cl_setbgcolour",			CLSetBGColour, false);
 	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder, false);
 	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel, false);
 	AddDCall(		"cl_blockids_clear",		ClearTextureLevels, false);
+
+	AddDFunction(	"cl_set_tex",				CLSetTex, false);
+	AddDFunction(	"cl_set_texid_size",		CLSetTexIndexSize, false);
 }
 
 void Console_Admin(const char **tokens, unsigned int count) {
 	if (count == 0) return;
 
 	ServerSetAdmin(atoi(tokens[0]));
+}
+
+void Console_Size(const char **tokens, unsigned int count) {
+	if (count < 2) return;
+
+	SetWindowPos(g_hwnd, NULL, 0, 0, atoi(tokens[0]), atoi(tokens[1]), 0);
 }
 
 void Console_Clear() {

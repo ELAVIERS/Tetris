@@ -13,6 +13,6 @@ typedef struct Quad_s {
 } Quad;
 
 void QuadCreate(Quad*);
-void QuadSetData(Quad*, float uvx, float uvy);
+void QuadSetData(Quad*, float uvw, float uvh);
 void QuadDelete(Quad*);
 void QuadRender(const Quad*);

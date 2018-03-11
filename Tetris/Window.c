@@ -57,7 +57,7 @@ void InitWindow(HINSTANCE instance) {
 	RegisterClassExA(&windowclass);
 
 	g_hwnd = CreateWindowA("tetris_window", "Tetris", WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, 512, 1024,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0,
 		NULL, NULL, instance, NULL);
 
 	g_devcontext = GetDC(g_hwnd);

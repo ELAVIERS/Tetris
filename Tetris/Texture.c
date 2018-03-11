@@ -7,10 +7,10 @@ void TextureFromFile(const char *filepath, Texture *out) {
 	Bitmap bmp;
 	LoadBMP(filepath, &bmp);
 	
-	if (bmp.buffer) {
-		if (out->glid)
-			glDeleteTextures(1, &out->glid);
+	if (out->glid)
+		glDeleteTextures(1, &out->glid);
 
+	if (bmp.buffer) {
 		out->width = bmp.width;
 		out->height = bmp.height;
 
@@ -25,4 +25,5 @@ void TextureFromFile(const char *filepath, Texture *out) {
 
 		free(bmp.buffer);
 	}
+	else out->glid = 0;
 }

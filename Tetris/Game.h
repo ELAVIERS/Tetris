@@ -11,6 +11,10 @@ void GameEnd();
 
 void GameSizeUpdate(unsigned short w, unsigned short h);
 
+void GameSetBlockIDSize(float size);
+
+//Net
+
 void GameBoardSetBlockData(int id, int size, const byte *data);
 void GameBoardSetBlockPos(int id, signed short x, signed short y);
 void GameBoardPlaceBlock(int id);

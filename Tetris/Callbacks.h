@@ -3,7 +3,9 @@
 
 DvarCallback
 	C_RunAsConfig,
-	C_CLFontTexture,
-	C_CLMenuFontTexture,
-	C_CLFontIDSize,
-	C_CLMenuFontIDSize;
+	C_CFGTexture;
+
+DFunc
+	CLSetBGColour,
+	CLSetTex,
+	CLSetTexIndexSize;
