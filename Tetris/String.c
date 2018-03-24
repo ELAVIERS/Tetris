@@ -71,7 +71,7 @@ unsigned int SplitTokens(const char *string, char ***out_tokens) {
 	}
 
 	if (token_count) {
-		char **tokens = (char**)malloc(sizeof(char*) * token_count);
+		char **tokens = (char**)malloc(token_count * sizeof(char*));
 
 		unsigned int token = 0;
 		for (const char *c = string; *c != '\0';) {
@@ -111,7 +111,7 @@ void FreeTokens(char **tokens, unsigned int count) {
 
 char* CombineTokens(const char **tokens, unsigned int count) {
 	char *string;
-	unsigned int string_size = 0;
+	size_t string_size = 0;
 
 	for (unsigned int i = 0; i < count; ++i)
 		string_size += strlen(tokens[i]);

@@ -103,6 +103,12 @@
     <Link>
       <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
+xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
+xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -114,6 +120,12 @@
     <Link>
       <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
+xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
+xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -129,6 +141,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
+xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
+xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -144,12 +162,18 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
+xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
+xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Bitmap.c" />
     <ClCompile Include="Block.c" />
+    <ClCompile Include="BlockManager.c" />
     <ClCompile Include="Board.c" />
-    <ClCompile Include="Callbacks.c" />
     <ClCompile Include="Client.c" />
     <ClCompile Include="Config.c" />
     <ClCompile Include="Dvar.c" />
@@ -166,7 +190,9 @@
     <ClCompile Include="Messaging.c" />
     <ClCompile Include="Networking.c" />
     <ClCompile Include="Quad.c" />
+    <ClCompile Include="Rendering.c" />
     <ClCompile Include="Resource.c" />
+    <ClCompile Include="RNG.c" />
     <ClCompile Include="Server.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
@@ -175,13 +201,14 @@
     <ClCompile Include="Texture.c" />
     <ClCompile Include="Timing.c" />
     <ClCompile Include="Console.c" />
+    <ClCompile Include="Variables.c" />
     <ClCompile Include="Window.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h" />
     <ClInclude Include="Block.h" />
+    <ClInclude Include="BlockManager.h" />
     <ClInclude Include="Board.h" />
-    <ClInclude Include="Callbacks.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Dvar.h" />
@@ -197,7 +224,9 @@
     <ClInclude Include="Messaging.h" />
     <ClInclude Include="Networking.h" />
     <ClInclude Include="Quad.h" />
+    <ClInclude Include="Rendering.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RNG.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />
@@ -207,6 +236,7 @@
     <ClInclude Include="Timing.h" />
     <ClInclude Include="Console.h" />
     <ClInclude Include="Types.h" />
+    <ClInclude Include="Variables.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>

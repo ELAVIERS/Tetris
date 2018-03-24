@@ -76,18 +76,18 @@ char* DvarAllocValueString(const Dvar *dvar);
 unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int dest_size);
 
 //
-void SetDvar(Dvar *dvar, DvarValue value);
-inline void SetDvarFloat(Dvar *dvar, float value) {
+void SetDvar(Dvar *dvar, DvarValue value, bool print);
+inline void SetDvarFloat(Dvar *dvar, float value, bool print) {
 	DvarValue v = { .number = value };
-	SetDvar(dvar, v);
+	SetDvar(dvar, v, print);
 }
-inline void SetDvarString(Dvar *dvar, char *string) {
+inline void SetDvarString(Dvar *dvar, char *string, bool print) {
 	DvarValue v = { .string = string };
-	SetDvar(dvar, v);
+	SetDvar(dvar, v, print);
 }
 
 //Dvar commands
-void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count);
+void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print);
 void HandleCommandTokens(const char **tokens, unsigned int count);
 void HandleCommandString(const char *command, bool message_server);
 

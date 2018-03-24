@@ -7,6 +7,8 @@
 	Manage vaos and vbos for text rendering inside a struct
  */
 
+int GetCharID(char);
+
 typedef struct {
 	char			*string;
 	unsigned int	x, y;

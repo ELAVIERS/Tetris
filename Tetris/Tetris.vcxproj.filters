@@ -60,9 +60,6 @@
     <ClCompile Include="Console.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Callbacks.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Settings.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +105,18 @@
     <ClCompile Include="Client.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Variables.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Rendering.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlockManager.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RNG.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h">
@@ -150,9 +159,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Console.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Callbacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Settings.h">
@@ -201,6 +207,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Variables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Rendering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RNG.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

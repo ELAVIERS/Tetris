@@ -86,6 +86,6 @@ void ShaderSetUniformVec3(GLuint program, const char *name, const float data[3])
 	glUniform3f(ShaderGetLocation(program, name), data[0], data[1], data[2]);
 }
 
-void ShaderSetUniformVec2(GLuint program, const char *name, const float data[2]) {
-	glUniform2f(ShaderGetLocation(program, name), data[0], data[1]);
+void ShaderSetUniformFloat2(GLuint program, const char *name, float x, float y) {
+	glUniform2f(ShaderGetLocation(program, name), x, y);
 }

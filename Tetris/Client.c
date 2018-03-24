@@ -6,6 +6,7 @@
 #include "Messaging.h"
 #include "Networking.h"
 #include "Resource.h"
+#include "Server.h"
 #include "String.h"
 #include <CommCtrl.h>
 #include <stdio.h>
@@ -26,6 +27,8 @@ void Client_ConnectToServer(const char *ip, const char *port) {
 	client_socket = NetworkCreateClientSocket(ip, port);
 
 	if (client_socket != INVALID_SOCKET) {
+		StopServer();
+
 		clientmsg.dynamic_buffer = NULL;
 
 		MessageServerString(SVMSG_NAME, GetDvar("name")->value.string);
@@ -109,6 +112,8 @@ void Client_CloseSocket() {
 
 		free(clientmsg.dynamic_buffer);
 	}
+
+	StartLocalServer();
 }
 
 void Client_Disconnect() {

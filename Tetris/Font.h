@@ -15,7 +15,7 @@ typedef struct TextNode_t {
 
 typedef struct {
 	Texture			*texture;
-	unsigned int	char_size;
+	float			char_size;
 
 	TextNode		*node;
 } Font;
@@ -37,5 +37,5 @@ inline float Font_UVSize(const Font *font) {
 	if (font->texture->width == 0)
 		return 0;
 
-	return (float)font->char_size / (float)font->texture->width;
+	return font->char_size / (float)font->texture->width;
 }

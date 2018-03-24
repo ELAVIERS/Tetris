@@ -9,6 +9,9 @@ void QuadCreate(Quad *quad) {
 }
 
 void QuadSetData(Quad *quad, float uvw, float uvh) {
+	quad->uv_w = uvw;
+	quad->uv_h = uvh;
+
 	Vertex_2P_2UV verts[6] = {
 		0, 0, 0,	0,
 		1, 0, uvw,	0,

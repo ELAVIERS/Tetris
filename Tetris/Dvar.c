@@ -218,7 +218,7 @@ Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *c
 	return dvar;
 }
 
-void SetDvar(Dvar *dvar, DvarValue value) {
+void SetDvar(Dvar *dvar, DvarValue value, bool print) {
 	if (dvar->type == DVT_STRING) {
 		free(dvar->value.string);
 		dvar->value.string = DupString(value.string);
@@ -229,7 +229,8 @@ void SetDvar(Dvar *dvar, DvarValue value) {
 	if (dvar->callback)
 		dvar->callback(dvar->value);
 
-	PrintValue(dvar);
+	if (print)
+		PrintValue(dvar);
 }
 
 char* DvarAllocValueString(const Dvar  *dvar) {
@@ -261,7 +262,7 @@ unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int de
 		free(value);
 
 		//Return length of string
-		return strlen(dvar->name) + 1 + strlen(value);
+		return (int)(strlen(dvar->name) + 1 + strlen(value));
 	}
 
 	return 0;
@@ -269,10 +270,13 @@ unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int de
 
 ////////////////
 
-void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count) {
+void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print) {
 	if (dvar->type == DVT_CALL) {
-		ConsolePrint(dvar->name);
-		ConsolePrint("()\n");
+		if (print) {
+			ConsolePrint(dvar->name);
+			ConsolePrint("()\n");
+		}
+
 		dvar->value.call();
 		return;
 	}
@@ -280,14 +284,16 @@ void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count) {
 	if (count > 0) {
 		switch (dvar->type) {
 		case DVT_FUNCTION:
-			ConsolePrint(dvar->name);
-			ConsolePrint("(");
-			for (unsigned int i = 0; i < count; ++i) {
-				ConsolePrint(tokens[i]);
-				if (i < count - 1)
-					ConsolePrint(", ");
+			if (print) {
+				ConsolePrint(dvar->name);
+				ConsolePrint("(");
+				for (unsigned int i = 0; i < count; ++i) {
+					ConsolePrint(tokens[i]);
+					if (i < count - 1)
+						ConsolePrint(", ");
+				}
+				ConsolePrint(")\n");
 			}
-			ConsolePrint(")\n");
 
 			dvar->value.function(tokens, count);
 			return;
@@ -321,7 +327,10 @@ void HandleCommand(const char **tokens, unsigned int count, const char *string, 
 		ConsolePrint(" is not a variable\n");
 	}
 	else {
-		if (message_server && dvar->server) {
+		if (count == 1 && dvar->type != DVT_CALL && dvar->type != DVT_FUNCTION) {
+			PrintValue(dvar);
+		}
+		else if (message_server && dvar->server) {
 			if (string)
 				MessageServerString(SVMSG_COMMAND, string);
 			else {
@@ -331,7 +340,7 @@ void HandleCommand(const char **tokens, unsigned int count, const char *string, 
 			}
 		}
 		else {
-			DvarCommand(dvar, tokens + 1, count - 1);
+			DvarCommand(dvar, tokens + 1, count - 1, true);
 			PrintValue(dvar);
 		}
 	}

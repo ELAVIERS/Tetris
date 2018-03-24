@@ -8,6 +8,14 @@
 #include <stdlib.h>
 #include <Windows.h>
 
+typedef struct {
+	char* name;
+
+	unsigned int level;
+	unsigned int score;
+	unsigned int line_score;
+} Client;
+
 Client *clients = NULL;
 int client_count = 0;
 
@@ -33,30 +41,32 @@ void ClientListAddItems() {
 		free(lvi.pszText);
 
 		ListView_SetItemText(hwnd_clientlist, i, 1, clients[i].name);
+		
+		char *string = AllocStringFromInt(clients[i].level);
+		ListView_SetItemText(hwnd_clientlist, i, 2, string);
+		free(string);
+		string = AllocStringFromInt(clients[i].score);
+		ListView_SetItemText(hwnd_clientlist, i, 3, string);
+		free(string);
+		string = AllocStringFromInt(clients[i].line_score);
+		ListView_SetItemText(hwnd_clientlist, i, 4, string);
+		free(string);
 	}
 }
 
 void LobbySetSize(int size) {
-	if (client_count > 1) {
-		for (int i = 1; i < client_count; ++i)
+	if (size < client_count)
+		for (int i = size; i < client_count; ++i)
 			free(clients[i].name);
-		
-		if (size == 0)
-			free(clients[0].name);
-	}
 
 	if (size > 0) {
+		int last = client_count;
 		client_count = size;
 
-		if (clients) {
-			clients = (Client*)realloc(clients, client_count * sizeof(Client));
-			for (int i = 1; i < client_count; ++i)
-				clients[i].name = DupString("");
-		}
-		else {
-			clients = (Client*)calloc(client_count, sizeof(Client));
-			for (int i = 0; i < client_count; ++i)
-				clients[i].name = DupString("");
+		clients = (Client*)realloc(clients, client_count * sizeof(Client));
+		for (int i = last; i < client_count; ++i) {
+			clients[i].name = DupString("");
+			clients[i].level = clients[i].score = clients[i].line_score = 0;
 		}
 
 		if (hwnd_clientlist) {
@@ -77,6 +87,36 @@ void LobbySetClientName(byte id, const char *name) {
 
 	if (hwnd_clientlist)
 		ListView_SetItemText(hwnd_clientlist, id, 1, clients[id].name);
+}
+
+void LobbySetClientLevel(byte id, uint16 level) {
+	clients[id].level = level;
+
+	if (hwnd_clientlist) {
+		char *string = AllocStringFromInt(level);
+		ListView_SetItemText(hwnd_clientlist, id, 2, string);
+		free(string);
+	}
+}
+
+void LobbySetClientScore(byte id, uint32 score) {
+	clients[id].score = score;
+
+	if (hwnd_clientlist) {
+		char *string = AllocStringFromInt(score);
+		ListView_SetItemText(hwnd_clientlist, id, 3, string);
+		free(string);
+	}
+}
+
+void LobbySetClientLineScore(byte id, uint32 line_clears) {
+	clients[id].line_score = line_clears;
+
+	if (hwnd_clientlist) {
+		char *string = AllocStringFromInt(line_clears);
+		ListView_SetItemText(hwnd_clientlist, id, 4, string);
+		free(string);
+	}
 }
 
 const char *LobbyGetClientName(byte id) {
@@ -144,17 +184,32 @@ void LobbyShow() {
 		LVCOLUMN lvc;
 		lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 		lvc.iSubItem = 0;
-		lvc.cx = 32;
+		lvc.cx = 24;
 		lvc.pszText = "ID";
 		lvc.fmt = LVCFMT_LEFT;
 
 		ListView_InsertColumn(hwnd_clientlist, 0, &lvc);
 
 		lvc.iSubItem = 1;
-		lvc.cx = 128;
+		lvc.cx = 96;
 		lvc.pszText = "Name";
 
 		ListView_InsertColumn(hwnd_clientlist, 1, &lvc);
+
+		lvc.iSubItem = 2;
+		lvc.pszText = "Level";
+
+		ListView_InsertColumn(hwnd_clientlist, 2, &lvc);
+
+		lvc.iSubItem = 3;
+		lvc.pszText = "Score";
+		
+		ListView_InsertColumn(hwnd_clientlist, 3, &lvc);
+
+		lvc.iSubItem = 4;
+		lvc.pszText = "Line Clears";
+
+		ListView_InsertColumn(hwnd_clientlist, 4, &lvc);
 
 		ClientListAddItems();
 	}

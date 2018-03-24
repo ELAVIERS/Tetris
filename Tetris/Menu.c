@@ -36,9 +36,9 @@ void Menu_AddItem(Menu *menu, const char *text, void (*callback)()) {
 	++(menu->item_count);
 	menu->items = (MenuItem*)realloc(menu->items, menu->item_count * sizeof(MenuItem));
 
-	Text *new_text = Font_NewText(g_menu_font);
+	Text *new_text = Font_NewText(&g_font);
 	SetTextInfo(new_text, text, 0, item_id * 32, 32);
-	GenerateTextData(new_text, Font_UVSize(g_menu_font));
+	GenerateTextData(new_text, Font_UVSize(&g_font));
 
 	menu->items[item_id].text =		new_text;
 	menu->items[item_id].callback =	callback;
@@ -61,7 +61,7 @@ void Menu_ChangeSelection(Menu *menu, int amount) {
 void Menu_Free(Menu* menu) {
 	//Free the text associated with the menu
 	for (unsigned int i = 0; i < menu->item_count; ++i) {
-		Font_RemoveText(g_menu_font, menu->items[i].text);
+		Font_RemoveText(&g_font, menu->items[i].text);
 		FreeText(menu->items[i].text);
 	}
 
@@ -240,7 +240,8 @@ void ActiveMenu_Select() {
 }
 
 void Menus_Render() {
-	glBindTexture(GL_TEXTURE_2D, g_menu_font->texture->glid);
+	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
+	glBindTexture(GL_TEXTURE_2D, g_font.texture->glid);
 
 	for (unsigned int i = 0; i < MENU_COUNT; ++i)
 		Menu_Render(menus + i);

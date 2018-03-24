@@ -1,6 +1,6 @@
 #pragma once
+#include "Types.h"
 #include <stdbool.h>
-#include <stdint.h>
 
 /*
 	Bitmap.h
@@ -9,10 +9,10 @@
 */
 
 typedef struct {
-	uint8_t *buffer;
-	uint32_t width;
-	uint32_t height;
-	uint16_t bitcount;
+	byte *buffer;
+	uint32 width;
+	uint32 height;
+	uint16 bitcount;
 } Bitmap;
 
 bool LoadBMP(const char *filepath, Bitmap *out_bmp);

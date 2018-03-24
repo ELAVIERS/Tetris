@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "BlockManager.h"
 #include "Client.h"
 #include "Config.h"
 #include "Console.h"
@@ -106,6 +107,14 @@ void ServerInitSlot(int id) {
 	message[2] = id;
 	ServerSend(id, message, 3);
 
+	if (slots[id].local == false) {
+		SendServerDvars(id);
+		SendBlockInfo(id);
+
+		message[0] = SVMSG_START;
+		ServerSend(id, message, 1);
+	}
+
 	message[0] = SVMSG_NAME;
 	for (int i = 0; i < slot_count; ++i) {
 		if (LobbyGetClientName(i)[0] != '\0') {
@@ -113,14 +122,6 @@ void ServerInitSlot(int id) {
 			strcpy_s(message + 2, MSG_LEN - 2, LobbyGetClientName(i));
 			ServerSend(id, message, (uint16)strlen(message + 2) + 3);
 		}
-	}
-
-	if (slots[id].local == false) {
-		SendServerDvars(id);
-		SendBlockInfo(id);
-
-		message[0] = SVMSG_START;
-		ServerSend(id, message, 1);
 	}
 }
 

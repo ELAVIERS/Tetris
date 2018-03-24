@@ -10,6 +10,8 @@
 typedef struct Quad_s {
 	GLuint vao;
 	GLuint vbo;
+
+	float uv_w, uv_h;
 } Quad;
 
 void QuadCreate(Quad*);

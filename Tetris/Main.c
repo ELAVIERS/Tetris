@@ -8,6 +8,7 @@
 #include "Server.h"
 #include "Settings.h"
 #include "Timing.h"
+#include "Variables.h"
 #include "Window.h"
 #include <CommCtrl.h>
 #include <GL/glew.h>
@@ -43,6 +44,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//Other
 	//
 	G_Init();
+	CreateVariables();
 	ConsoleInit();
 	SettingsInit();
 	LobbyInit();

@@ -20,4 +20,5 @@ GLint ShaderGetLocation(GLuint shader, const char *name);
 
 void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data);
 void ShaderSetUniformVec3(GLuint program, const char *name, const float data[3]);
-void ShaderSetUniformVec2(GLuint program, const char *name, const float data[2]);
+
+void ShaderSetUniformFloat2(GLuint program, const char *name, float x, float y);

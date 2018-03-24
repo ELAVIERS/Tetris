@@ -1,4 +1,5 @@
 #include "InputManager.h"
+#include "Variables.h"
 #include <string.h>
 
 #define KEYNAME_COUNT 69
@@ -193,10 +194,10 @@ void KeyDown(WORD vk) {
 		if (bind->key == vk) {
 			switch (bind->data.type) {
 			case BIND_COMMAND:
-				DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count);
+				DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count, (bool)*bind_print);
 				break;
 			case BIND_AXIS:
-				SetDvarFloat(bind->dvar, bind->dvar->value.number + bind->data.axisvalue);
+				SetDvarFloat(bind->dvar, bind->dvar->value.number + bind->data.axisvalue, (bool)*bind_print);
 				break;
 			}
 			return;
@@ -206,7 +207,7 @@ void KeyDown(WORD vk) {
 void KeyUp(WORD vk) {
 	for (KeyBind *bind = binds; bind && bind->key <= vk; bind = bind->next)
 		if (bind->key == vk && bind->data.type == BIND_AXIS)
-			SetDvarFloat(bind->dvar, bind->dvar->value.number - bind->data.axisvalue);
+			SetDvarFloat(bind->dvar, bind->dvar->value.number - bind->data.axisvalue, (bool)*bind_print);
 }
 
 #include <stdio.h>

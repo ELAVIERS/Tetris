@@ -1,5 +1,4 @@
 #include "IO.h"
-
 #include <stdbool.h>
 #include <Windows.h>
 
@@ -16,14 +15,14 @@ unsigned int FindFilesInDirectory(const char *filepath, char ***out_files, DWORD
 			++file_count;
 	} while (FindNextFileA(h_find, &find_data));
 
-	char **files = malloc(sizeof(char*) * file_count);
+	char **files = (char**)malloc(file_count * sizeof(char*));
 
 	//I do not like doing this...
 	h_find = FindFirstFileA(filepath, &find_data);
 	int i = 0;
 	do {
 		if (find_data.dwFileAttributes & filter) {
-			files[i] = malloc(MAX_PATH);
+			files[i] = (char*)malloc(MAX_PATH);
 			strcpy_s(files[i], MAX_PATH, find_data.cFileName);
 			++i;
 		}
@@ -44,7 +43,7 @@ unsigned int FileRead(const char *filepath, char **buffer_out) {
 	if (!GetFileSizeEx(file, &file_len))
 		return 0;  
 
-	char *buffer = malloc(file_len.LowPart + 1);
+	char *buffer = (char*)malloc(file_len.LowPart + 1);
 	
 	OVERLAPPED ovl = {0};
 	ReadFileEx(file, buffer, file_len.LowPart, &ovl, CallbackThatWindowsWantsElseEverythingGoesMental);
@@ -58,8 +57,7 @@ unsigned int FileRead(const char *filepath, char **buffer_out) {
 
 void FileWrite(const char *filepath, const char *buffer) {
 	HANDLE file = CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (!file)
-		return;
+	if (!file) return;
 
 	WriteFile(file, (LPCVOID)buffer, (DWORD)strlen(buffer), NULL, NULL);
 

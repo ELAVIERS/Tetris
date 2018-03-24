@@ -26,7 +26,7 @@ void RenderText(const Text *text) {
 	glDrawArrays(GL_TRIANGLES, 0, text->data_length);
 }
 
-int CharIndex(char c) {
+int GetCharID(char c) {
 	if (c == ' ')
 		return -1;
 
@@ -60,13 +60,13 @@ unsigned int CharCount(const char *string) {
 void GenerateTextData(Text *text, float uv_size) {
 	text->data_length = 6 * CharCount(text->string);
 
-	Vertex_2P_2UV *verts = (Vertex_2P_2UV*)malloc(sizeof(Vertex_2P_2UV) * text->data_length);
+	Vertex_2P_2UV *verts = (Vertex_2P_2UV*)malloc(text->data_length * sizeof(Vertex_2P_2UV));
 
 	float divs = 1.f / uv_size;
 	float cx = (float)text->x;
 	int i = 0;
 	for (const char *c = text->string; *c != '\0'; ++c) {
-		int index = CharIndex(*c);
+		int index = GetCharID(*c);
 
 		if (index >= 0)
 		{

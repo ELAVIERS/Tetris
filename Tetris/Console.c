@@ -1,16 +1,6 @@
 #include "Console.h"
-#include "Callbacks.h"
-#include "Block.h"
-#include "Board.h"
-#include "Config.h"
 #include "Dvar.h"
-#include "Globals.h"
-#include "InputManager.h"
-#include "Lobby.h"
-#include "Messaging.h"
 #include "Resource.h"
-#include "Server.h"
-#include "String.h"
 #include <CommCtrl.h>
 #include <stdlib.h>
 #include <Windows.h>
@@ -181,8 +171,15 @@ void ConsolePrint(const char *string) {
 	}
 }
 
-void Console_Clear(), Console_Exit(), Console_List(), Console_Save();
-DFunc Console_Admin, Console_Run, Console_Size;
+void FUNC_Clear() {
+	ConsoleResetBuffer();
+	SetWindowTextA(hwnd_console_text, console_buffer);
+}
+
+void FUNC_List() {
+	ConsolePrint("\nDynamic variables:\n");
+	ListDvars();
+}
 
 void ConsoleInit() {
 	ConsoleResetBuffer();
@@ -207,84 +204,8 @@ void ConsoleInit() {
 	};
 	RegisterClassExA(&windowclass);
 
-	////
-	//Config Variables
-	////
-	AddCvar(AddDStringC("cfg_texture", "", C_CFGTexture, false));
-
-	AddCvar(AddDStringC("name", "Player", C_Name, false));
-
-	////
-	//
-	////
-	AddDCall(		"lobby",					LobbyShow,		false);
-
-	AddDFunction(	"sv_admin_add",				Console_Admin,	true);
-	AddDFunction(	"run",						Console_Run,	false);
-	AddDCall(		"clear",					Console_Clear,	false);
-	AddDCall(		"exit",						Console_Exit,	false);
-	AddDCall(		"list",						Console_List,	false);
-	AddDCall(		"save",						Console_Save,	false);
-	AddDFunction(	"say",						CFunc_Send,		false);
-	AddDFunction(	"size",						Console_Size,	false);
-
-	AddDFunction(	"bind",						Bind,			false);
-	AddDFunction(	"bindaxis",					BindAxis,		false);
-	AddDCall(		"clear_binds",				ClearBinds,		false);
-
-	AddDFloat(		"sv_playercount",			4,				true);
-	AddDString(		"sv_port",					"7777",			true);
-
-	AddDFunction(	"sv_blocks_add",			SVAddBlock,		true);
-	AddDCall(		"sv_blocks_clear",			ClearBlocks,	true);
-	AddDFloat(		"sv_board_width",			10,				true);
-	AddDFloat(		"sv_board_height",			20,				true);
-
-	AddDFunction(	"cl_setbgcolour",			CLSetBGColour, false);
-	AddDFunction(	"cl_blockid_order",			CLSetTextureIndexOrder, false);
-	AddDFunction(	"cl_blockids_add",			CLAddTextureLevel, false);
-	AddDCall(		"cl_blockids_clear",		ClearTextureLevels, false);
-
-	AddDFunction(	"cl_set_tex",				CLSetTex, false);
-	AddDFunction(	"cl_set_texid_size",		CLSetTexIndexSize, false);
-}
-
-void Console_Admin(const char **tokens, unsigned int count) {
-	if (count == 0) return;
-
-	ServerSetAdmin(atoi(tokens[0]));
-}
-
-void Console_Size(const char **tokens, unsigned int count) {
-	if (count < 2) return;
-
-	SetWindowPos(g_hwnd, NULL, 0, 0, atoi(tokens[0]), atoi(tokens[1]), 0);
-}
-
-void Console_Clear() {
-	ConsoleResetBuffer();
-	SetWindowTextA(hwnd_console_text, console_buffer);
-}
-
-void Console_Exit() {
-	g_running = false;
-}
-
-void Console_List() {
-	ConsolePrint("\nDynamic variables:\n");
-	ListDvars();
-}
-
-void Console_Run(const char **tokens, unsigned int count) {
-	if (count == 0)
-		return;
-
-	if (!RunConfig(tokens[0]))
-		ConsolePrint("File not found\n");
-}
-
-void Console_Save() {
-	SaveCvars();
+	AddDCall("clear", FUNC_Clear, false);
+	AddDCall("list", FUNC_List, false);
 }
 
 void ConsoleOpen() {

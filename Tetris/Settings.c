@@ -95,7 +95,7 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case CBN_SELCHANGE:
 		{
 			int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
-			SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index]);
+			SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index], true);
 
 			SaveCvars();
 		}
@@ -104,7 +104,7 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{	
 			char namebuffer[64];
 			GetWindowTextA(hwnd_setting_name, namebuffer, 64);
-			SetDvarString(GetDvar("name"), namebuffer);
+			SetDvarString(GetDvar("name"), namebuffer, true);
 
 			SaveCvars();
 			break;

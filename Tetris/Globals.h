@@ -26,8 +26,7 @@ Mat3			g_projection;
 
 GLuint			g_active_shader;
 
-#define TEX_COUNT 11
-
+#define TEX_COUNT	11
 #define TEX_FONT	0
 #define TEX_BLOCK	1
 #define	TEX_UL		2
@@ -43,10 +42,16 @@ GLuint			g_active_shader;
 bool			g_drawborder;
 Texture			g_textures[TEX_COUNT];
 
-Quad			g_defquad;
+#define QUAD_COUNT	3
+#define QUAD_SINGLE 0
+#define QUAD_FONT	1
+#define QUAD_BLOCK	2
 
-extern Font* const g_font;
-extern Font* const g_menu_font;
+Quad			g_quads[QUAD_COUNT];
+
+Font g_font;
 
 void G_Init();
 void G_Free();
+
+void G_ClearTextures();

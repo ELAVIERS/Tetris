@@ -2,10 +2,6 @@
 #include "Types.h"
 #include <stdbool.h>
 
-typedef struct {
-	char* name;
-} Client;
-
 bool IsRemoteClient();
 
 void ClientFrame();

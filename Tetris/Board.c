@@ -1,33 +1,44 @@
 #include "Board.h"
+#include "BlockManager.h"
 #include "Console.h"
-#include "Dvar.h"
 #include "Globals.h"
 #include "Matrix.h"
 #include "Quad.h"
+#include "Rendering.h"
+#include "RNG.h"
 #include "Shader.h"
 #include "String.h"
+#include "Variables.h"
 #include <GL/glew.h>
 #include <stdlib.h>
 #include <string.h>
 
-unsigned short tex_blocks_divx, tex_blocks_divy;
+void BoardRefillQueueSlots(Board *board) {
+	for (unsigned int i = 0; i < board->visible_queue_length;)
+		if (board->next_queue[i] == 0xFF) {
+			GenerateBag(board->next_queue + i, board->bag_element_count);
+			i += board->bag_size ? board->bag_size : board->bag_element_count;
 
-typedef struct {
-	char block_id;
-	short index;
-} TextureBinding;
+			if (i < board->queue_length)
+				board->next_queue[i] = 0xFF;
+		}
+		else ++i;
+}
 
-typedef struct TextureLevel_s {
-	TextureBinding *texdata;
-	unsigned int texdata_size;
+int GetNextIndexInQueue(Board *board) {
+	int index = board->next_queue[0];
 
-	struct TextureLevel_s *next_level;
-} TextureLevel;
+	for (unsigned int i = 1; i < board->queue_length; ++i)
+		board->next_queue[i - 1] = board->next_queue[i];
+	board->next_queue[board->queue_length - 1] = -1;
 
-TextureLevel *current_level;
+	BoardRefillQueueSlots(board);
+
+	return index;
+}
 
 void BoardUseNextBlock(Board *board) {
-	BlockSetRandom(&board->block, board->rows - 1);
+	CreateNewBlock(GetNextIndexInQueue(board), &board->block, board->rows - 1);
 }
 
 void BoardCreate(Board *board) {
@@ -37,32 +48,62 @@ void BoardCreate(Board *board) {
 	for (int i = 0; i < board->rows; ++i)
 		board->data[i] = data_block + (i * board->columns);
 
-	QuadCreate(&board->quad);
+	board->nametag = Font_NewText(&g_font);
+	SetTextInfo(board->nametag, DupString("Empty"), 0, 0, 32);
+	GenerateTextData(board->nametag, Font_UVSize(&g_font));
 
 	board->block.size = 0;
 	board->block.data = NULL;
+	board->level = 0;
+	board->score = 0;
+	board->level_clears = 0;
+	board->line_clears = 0;
+
+	board->queue_length = 0;
+	board->visible_queue_length = 0;
+	board->bag_size = 0;
+	board->bag_element_count = 0;
+	board->next_queue = NULL;
+}
+
+void BoardReallocNextQueue(Board *board, byte visible_elements, byte bag_element_count) {
+	unsigned int prev_queue_length = board->queue_length;
+	board->visible_queue_length = visible_elements;
+	board->bag_element_count = bag_element_count;
+
+	board->queue_length = board->visible_queue_length + board->bag_element_count - 1;
+	board->next_queue = (byte*)realloc(board->next_queue, board->queue_length);
+
+	for (unsigned int i = prev_queue_length; i < board->queue_length; ++i)
+		board->next_queue[i] = 0xFF;
+
+	BoardRefillQueueSlots(board);
 }
 
 void BoardFree(Board *board) {
-	QuadDelete(&board->quad);
-
 	free(&board->data[0][0]);
 	free(board->data);
 	free(board->block.data);
+	free(board->next_queue);
+
+	Font_RemoveText(&g_font, board->nametag);
+	FreeText(board->nametag);
 }
 
 void BoardClear(Board *board) {
-	for (byte i = 0; i < board->rows; ++i)
-		ZeroMemory(board->data[i], board->columns);
+	ZeroMemory(&board->data[0][0], board->rows * board->columns);
 }
 
 void BoardSetIDSize(Board *board, float id_size) {
-	Texture* tex_block = g_textures + TEX_BLOCK;
+	QuadSetData(g_quads + QUAD_BLOCK, id_size / (float)g_textures[TEX_BLOCK].width, id_size / (float)g_textures[TEX_BLOCK].height);
+}
 
-	QuadSetData(&board->quad, id_size / (float)tex_block->width, id_size / (float)tex_block->height);
+inline bool RowIsFull(Board *board, unsigned int row) {
+	for (unsigned int c = 0; c < board->columns; ++c)
+		if (board->data[row][c] == 0)
+			return false;
 
-	tex_blocks_divx = tex_block->width / (unsigned short)id_size;
-	tex_blocks_divy = tex_block->height / (unsigned short)id_size;
+	return true;
 }
 
 inline void ClearRow(Board *board, unsigned int row) {
@@ -74,29 +115,27 @@ inline void ClearRow(Board *board, unsigned int row) {
 		board->data[board->rows - 1][c] = 0;
 }
 
-inline bool RowIsFull(Board *board, unsigned int row) {
-	for (unsigned int c = 0; c < board->columns; ++c)
-		if (board->data[row][c] == 0)
-			return false;
+int BoardClearFullLines(Board *board) {
+	int clears = 0;
 
-	return true;
-}
-
-void boardCheckForClears(Board *board) {
 	for (unsigned int r = 0; r < board->rows;)
-		if (RowIsFull(board, r))
+		if (RowIsFull(board, r)) {
 			ClearRow(board, r);
+			++clears;
+		}
 		else
 			++r;
+
+	return clears;
 }
 
-void BoardSubmitBlock(Board *board) {
+int BoardSubmitBlock(Board *board) {
 	for (unsigned int r = 0; r < board->block.size; ++r)
 		for (unsigned int c = 0; c < board->block.size; ++c)
 			if (board->block.data[RC1D(board->block.size, r, c)])
 				board->data[board->block.y + r][board->block.x + c] = board->block.data[RC1D(board->block.size, r, c)];
 
-	boardCheckForClears(board);
+	return BoardClearFullLines(board);
 }
 
 bool BoardCheckMove(const Board *board, short x, short y) {
@@ -118,57 +157,7 @@ bool BoardCheckMove(const Board *board, short x, short y) {
 	return true;
 }
 
-short TextureLevelIDIndex(char id) {
-	for (unsigned int i = 0; i < current_level->texdata_size; ++i)
-		if (current_level->texdata[i].block_id == id)
-			return current_level->texdata[i].index;
-
-	return -1;
-}
-
-inline void RenderEdgePart(Mat3 transform, int id) {
-	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-	glBindTexture(GL_TEXTURE_2D, g_textures[id].glid);
-	QuadRender(&g_defquad);
-}
-
-void BoardRenderBorder(const Board *board, float bw, float bh) {
-	Mat3 transform;
-	float w = bw * (board->columns + 1);
-	float h = bh * (board->rows + 1);
-	
-	Mat3Identity(transform);
-	Mat3Scale(transform, bw, bh);
-	Mat3Translate(transform, board->x, board->y);
-	RenderEdgePart(transform, TEX_BL);
-
-	Mat3Translate(transform, 0, h);
-	RenderEdgePart(transform, TEX_UL);
-
-	Mat3Translate(transform, w, 0);
-	RenderEdgePart(transform, TEX_UR);
-
-	Mat3Translate(transform, 0, -h);
-	RenderEdgePart(transform, TEX_BR);
-
-	//Horizontal edges
-	Mat3Identity(transform);
-	Mat3Scale(transform, w - bw, bh);
-	Mat3Translate(transform, board->x + bw, board->y);
-	RenderEdgePart(transform, TEX_B);
-
-	Mat3Translate(transform, 0.f, h);
-	RenderEdgePart(transform, TEX_U);
-
-	//Vertical Edges
-	Mat3Identity(transform);
-	Mat3Scale(transform, bw, h - bh);
-	Mat3Translate(transform, board->x, board->y + bh);
-	RenderEdgePart(transform, TEX_L);
-
-	Mat3Translate(transform, w, 0.f);
-	RenderEdgePart(transform, TEX_R);
-}
+#define CELL_SIZE 4
 
 void BoardRender(const Board *board) {
 	Mat3 transform;
@@ -177,31 +166,93 @@ void BoardRender(const Board *board) {
 
 	float x = board->x + (g_drawborder ? block_w : 0.f);
 	float y = board->y + (g_drawborder ? block_h : 0.f);
-	float w = block_w * board->columns;
-	float h = block_h * board->rows;
-	
-	float uvoffset[2] = { 0.f, 0.001f / g_textures[TEX_BLOCK].height }; //stupid but it works
+	float h = block_h * (board->rows - (g_drawborder ? 0 : 2));
 
+	float nextblock_size = (float)h / (float)(CELL_SIZE * board->visible_queue_length);
+	if (nextblock_size > block_w)
+		nextblock_size = block_w;
+	
 	glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"), 0.f, 0.f);
 
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	Mat3Identity(transform);
-	Mat3Scale(transform, w, h);
+	Mat3Scale(transform, block_w * board->columns, block_h * board->rows);
 	Mat3Translate(transform, x, y);
 	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	QuadRender(&board->quad);
+	QuadRender(g_quads + QUAD_SINGLE);
 
-	if (g_drawborder)
-		BoardRenderBorder(board, block_w, block_h);
+	if (*sv_queue_size != 0) {
+		Mat3Identity(transform);
+		Mat3Scale(transform, block_w * CELL_SIZE, h);
+		Mat3Translate(transform, board->x + board->width + block_w, board->y + block_h);
+		ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+		QuadRender(g_quads + QUAD_SINGLE);
+	}
+
+	if (g_drawborder) {
+		RenderBorder(board->x, board->y, board->width, board->height, block_w, block_h);
+
+		if (*sv_queue_size != 0)
+			RenderBorder((float)(board->x + board->width), (float)board->y, block_w * (CELL_SIZE + 2), board->height, block_w, block_h);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
 
 	Mat3Identity(transform);
 	Mat3Scale(transform, block_w, block_h);
 	Mat3Translate(transform, x, y);
-	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
-	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, tex_blocks_divx, tex_blocks_divy, transform, &board->quad, uvoffset);
+	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, transform, g_quads + QUAD_BLOCK, board->level);
 
 	Mat3Translate(transform, board->block.x * block_w, board->block.y * block_h);
-	RenderTileBuffer(board->block.data, board->block.size, board->block.size, tex_blocks_divx, tex_blocks_divy, transform, &board->quad, uvoffset);
+	RenderTileBuffer(board->block.data, board->block.size, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
+
+	if (board->visible_queue_length) {
+		Mat3Identity(transform);
+		Mat3Scale(transform, nextblock_size, nextblock_size);
+
+		transform[2][0] = board->x + board->width + block_w;
+		transform[2][1] = board->y + board->height - block_h - (nextblock_size * CELL_SIZE);
+
+		for (uint16 i = 0; i < board->visible_queue_length; ++i) {
+			RenderBlockByID(board->next_queue[i], transform, g_quads + QUAD_BLOCK, board->level);
+			Mat3Translate(transform, 0, -nextblock_size * CELL_SIZE);
+		}
+	}
+}
+
+void BoardRenderText(const Board *board) {
+	Mat3 transform;
+	float block_w = (float)board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
+	float block_h = (float)board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+
+	Mat3Identity(transform);
+	Mat3Translate(transform, board->x + block_w + 4, board->y + board->height - block_h - 36);
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
+	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_FONT].glid);
+	RenderText(board->nametag);
+
+	Mat3Identity(transform);
+	Mat3Scale(transform, 32, 32);
+	Mat3Translate(transform, board->x + board->width - block_w - (32 * 6) - 4, board->y + block_h + 4);
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+
+	static char score_string[7] = {0,0,0,0,0,0,'\0'};
+	score_string[5] = '0' + board->score % 10;
+	score_string[4] = '0' + board->score % 100 / 10;
+	score_string[3] = '0' + board->score % 1000 / 100;
+	score_string[2] = '0' + board->score % 10000 / 1000;
+	score_string[1] = '0' + board->score % 100000 /	10000;
+	score_string[0] = '0' + board->score % 1000000 / 100000;
+	RenderString(score_string, transform);
+}
+
+unsigned short BoardCalculateExtraWidth(const Board *board, float width) {
+	if (*sv_queue_size == 0)
+		return 0;
+
+	return (short)(width / (float)(board->columns + (g_drawborder ? 2 : 0))) * (CELL_SIZE + 2);
 }
 
 //Input
@@ -211,9 +262,6 @@ bool BoardInputDown(Board *board) {
 		--board->block.y;
 		return true;
 	}
-
-	BoardSubmitBlock(board);
-	BoardUseNextBlock(board);
 
 	return false;
 }
@@ -246,81 +294,4 @@ bool BoardInputCW(Board *board) {
 	}
 
 	return true;
-}
-
-
-////
-
-char **id_groups;
-unsigned int group_count = 0;
-unsigned int blockid_count;
-
-TextureLevel *first_level;
-
-void UseNextTextureLevel() {
-	current_level = current_level->next_level;
-	
-	if (!current_level) current_level = first_level;
-}
-
-void CLSetTextureIndexOrder(const char **tokens, unsigned int count) {
-	FreeTokens(id_groups, group_count);
-
-	id_groups = (char**)malloc(count * sizeof(char*));
-
-	blockid_count = 0;
-	for (unsigned int i = 0; i < count; ++i) {
-		id_groups[i] = DupString(tokens[i]);
-		blockid_count += (unsigned int)strlen(tokens[i]);
-	}
-
-	group_count = count;
-}
-
-void CLAddTextureLevel(const char **tokens, unsigned int count) {
-	if (count != group_count) {
-		ConsolePrint("Error : Invalid argument count\n");
-		return;
-	}
-
-	TextureLevel *new_level = (TextureLevel*)malloc(sizeof(TextureLevel));
-	new_level->next_level = NULL;
-	new_level->texdata = (TextureBinding*)malloc(blockid_count * sizeof(TextureBinding));
-	new_level->texdata_size = blockid_count;
-
-	unsigned int counter = 0;
-	for (unsigned int i = 0; i < group_count; ++i) {
-		short texid = (short)atoi(tokens[i]);
-		for (const char *c = id_groups[i]; *c != '\0'; ++c) {
-			new_level->texdata[counter].block_id = *c;
-			new_level->texdata[counter].index = texid;
-			++counter;
-		}
-	}
-
-	if (!first_level) {
-		first_level = new_level;
-		current_level = first_level;
-	}
-	else {
-		TextureLevel *level = first_level;
-		for (; level->next_level; level = level->next_level);
-
-		level->next_level = new_level;
-	}
-}
-
-void ClearTextureLevels() {
-	TextureLevel *next;
-	
-	while (first_level) {
-		next = first_level->next_level;
-		free(first_level->texdata);
-		free(first_level);
-		first_level = next;
-	}
-}
-
-void C_CLBlockTexture(DvarValue string) {
-	TextureFromFile(string.string, g_textures + TEX_BLOCK);
 }

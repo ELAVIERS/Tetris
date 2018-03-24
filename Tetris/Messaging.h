@@ -46,6 +46,39 @@ typedef enum MessageID_e {
 			2:PLAYER NAME (STRING)
 	*/
 
+	SVMSG_LEVEL,
+	/*
+			1:PLAYER ID (BYTE)
+			2:LEVEL (INT16)
+	*/
+
+	SVMSG_SCORE,
+	/*
+		SERVER
+			1:SCORE (INT32)
+		CLIENT
+			1:PLAYER ID (BYTE)
+			2:SCORE (INT32)
+	*/
+
+	SVMSG_LINESCORE,
+	/*
+		CLIENT
+			1:PLAYER ID (BYTE)
+			1:LINE CLEARS (INT32)
+	*/
+
+	SVMSG_QUEUE,
+	/*
+		SERVER
+			1:QUEUE LENGTH (BYTE)
+			2:QUEUE (BYTE ARRAY)
+		CLIENT
+			1:PLAYER ID (BYTE)
+			2:QUEUE LENGTH (BYTE)
+			3:QUEUE (BYTE ARRAY)
+	*/
+
 	SVMSG_TEXT,
 	/*
 		CLIENT
@@ -126,7 +159,5 @@ void ServerReceiveMessage(const byte *data, uint16 length, byte playerid);
 void ClientReceiveMessage(const byte *data, uint16 length);
 
 void MessageServerString(MessageID type, const char *string);
-
-void C_Name(DvarValue value);
 
 void CFunc_Send(const char **tokens, unsigned int count);
