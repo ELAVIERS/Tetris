@@ -8,7 +8,6 @@
 #include "RNG.h"
 #include "Shader.h"
 #include "String.h"
-#include "Variables.h"
 #include <GL/glew.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,8 +36,37 @@ int GetNextIndexInQueue(Board *board) {
 	return index;
 }
 
+bool BoardCheckMove(const Board *board, short x, short y) {
+	unsigned int size = board->block.size;
+	unsigned int sizesq = size * size;;
+
+	short r, c;
+
+	for (unsigned int i = 0; i < sizesq; ++i) {
+		if (board->block.data[i]) {
+			r = board->block.y + y + (i / size);
+			c = board->block.x + x + (i % size);
+
+			if (r < 0 || c < 0 || r >= board->rows || c >= board->columns || board->data[r][c])
+				return false;
+		}
+	}
+
+	return true;
+}
+
+
+void BoardUpdateGhostY(Board *board) {
+	int i;
+	for (i = 0; BoardCheckMove(board, 0, i); --i);
+
+	board->ghost_y = board->block.y + i + 1;
+}
+
 void BoardUseNextBlock(Board *board) {
 	CreateNewBlock(GetNextIndexInQueue(board), &board->block, board->rows - 1);
+
+	BoardUpdateGhostY(board);
 }
 
 void BoardCreate(Board *board) {
@@ -138,63 +166,47 @@ int BoardSubmitBlock(Board *board) {
 	return BoardClearFullLines(board);
 }
 
-bool BoardCheckMove(const Board *board, short x, short y) {
-	unsigned int size = board->block.size;
-	unsigned int sizesq = size * size;;
-
-	short r, c;
-
-	for (unsigned int i = 0; i < sizesq; ++i) {
-		if (board->block.data[i]) {
-			r = board->block.y + y + (i / size);
-			c = board->block.x + x + (i % size);
-
-			if (r < 0 || c < 0 || r >= board->rows || c >= board->columns || board->data[r][c])
-				return false;
-		}
-	}
-
-	return true;
-}
-
 #define CELL_SIZE 4
 
-void BoardRender(const Board *board) {
+void BoardRender(const Board *board, bool draw_ghost) {
 	Mat3 transform;
-	float block_w = (float)board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
-	float block_h = (float)board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+	float block_w = board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
+	float block_h = board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
 
 	float x = board->x + (g_drawborder ? block_w : 0.f);
 	float y = board->y + (g_drawborder ? block_h : 0.f);
 	float h = block_h * (board->rows - (g_drawborder ? 0 : 2));
 
-	float nextblock_size = (float)h / (float)(CELL_SIZE * board->visible_queue_length);
+	float nextblock_size = h / (float)(CELL_SIZE * board->visible_queue_length);
 	if (nextblock_size > block_w)
 		nextblock_size = block_w;
-	
+
 	glUniform2f(ShaderGetLocation(g_active_shader, "u_uvoffset"), 0.f, 0.f);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	Mat3Identity(transform);
-	Mat3Scale(transform, block_w * board->columns, block_h * board->rows);
-	Mat3Translate(transform, x, y);
-	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-	QuadRender(g_quads + QUAD_SINGLE);
-
-	if (*sv_queue_size != 0) {
-		Mat3Identity(transform);
-		Mat3Scale(transform, block_w * CELL_SIZE, h);
-		Mat3Translate(transform, board->x + board->width + block_w, board->y + block_h);
-		ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-		QuadRender(g_quads + QUAD_SINGLE);
-	}
-
 	if (g_drawborder) {
-		RenderBorder(board->x, board->y, board->width, board->height, block_w, block_h);
+		RenderPanel(board->x, board->y, board->width, board->height, block_w, block_h);
 
-		if (*sv_queue_size != 0)
-			RenderBorder((float)(board->x + board->width), (float)board->y, block_w * (CELL_SIZE + 2), board->height, block_w, block_h);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel(board->x, board->y - block_h * 3, board->width, block_h * 3, block_w, block_h);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel(board->x, board->y + board->height, board->width, block_h * 3, block_w, block_h);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel(board->x + board->width, board->y - block_h * 3, block_w * (CELL_SIZE + 2), block_h * 3, block_w, block_h);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel(board->x + board->width, board->y + board->height, block_w * (CELL_SIZE + 2), block_h * 3, block_w, block_h);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel((float)(board->x + board->width), (float)board->y, block_w * (CELL_SIZE + 2), board->height, block_w, block_h);
+	}
+	else {
+		RenderRect(x, y, block_w * board->columns, block_h * board->rows);
+
+		RenderRect(board->x + board->width + block_w, board->y + block_h, block_w * CELL_SIZE, h);
 	}
 
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
@@ -204,7 +216,15 @@ void BoardRender(const Board *board) {
 	Mat3Translate(transform, x, y);
 	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, transform, g_quads + QUAD_BLOCK, board->level);
 
-	Mat3Translate(transform, board->block.x * block_w, board->block.y * block_h);
+	if (draw_ghost) {
+		Mat3Translate(transform, board->block.x * block_w, board->ghost_y * block_h);
+		ShaderSetUniformFloat(g_active_shader, "u_transparency", 0.5f);
+		RenderTileBuffer(board->block.data, board->block.size, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
+		ShaderSetUniformFloat(g_active_shader, "u_transparency", 0.f);
+	}
+	else transform[2][0] = x + board->block.x * block_w;
+
+	transform[2][1] = y + board->block.y * block_h;
 	RenderTileBuffer(board->block.data, board->block.size, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
 
 	if (board->visible_queue_length) {
@@ -223,36 +243,60 @@ void BoardRender(const Board *board) {
 
 void BoardRenderText(const Board *board) {
 	Mat3 transform;
-	float block_w = (float)board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
-	float block_h = (float)board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+	float block_w = board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
+	float block_h = board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
 
 	Mat3Identity(transform);
-	Mat3Translate(transform, board->x + block_w + 4, board->y + board->height - block_h - 36);
+	Mat3Translate(transform, board->x + block_w + 4, board->y + board->height + block_h);
 	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
 	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_FONT].glid);
 	RenderText(board->nametag);
 
+	static char score_string[7] = { 0,0,0,0,0,0,'\0' };
+	if (board->score <= 999999) {
+		score_string[5] = '0' + board->score % 10;
+		score_string[4] = '0' + board->score % 100 / 10;
+		score_string[3] = '0' + board->score % 1000 / 100;
+		score_string[2] = '0' + board->score % 10000 / 1000;
+		score_string[1] = '0' + board->score % 100000 / 10000;
+		score_string[0] = '0' + board->score % 1000000 / 100000;
+	}
+	else
+		score_string[0] = score_string[1] = score_string[2] = score_string[3] = score_string[4] = score_string[5] = '9';
+
+	static char line_string[4] = { 0, 0, 0,'\0' };
+	if (board->line_clears <= 999) {
+		line_string[2] = '0' + board->line_clears % 10;
+		line_string[1] = '0' + board->line_clears % 100 / 10;
+		line_string[0] = '0' + board->line_clears % 1000 / 100;
+	}
+	else
+		line_string[0] = line_string[1] = line_string[2] = '9';
+
+	static char level_string[3] = { 0, 0, '\0' };
+	if (board->level < 99) {
+		level_string[1] = '0' + board->level % 10;
+		level_string[0] = '0' + board->level % 100 / 10;
+	}
+	else
+		level_string[0] = level_string[1] = '9';
+
 	Mat3Identity(transform);
-	Mat3Scale(transform, 32, 32);
-	Mat3Translate(transform, board->x + board->width - block_w - (32 * 6) - 4, board->y + block_h + 4);
+	Mat3Scale(transform, block_h, block_h);
+	Mat3Translate(transform, board->x + block_w * ((board->columns + 2.f) / 4.f), board->y - block_h * 2);
 	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
-
-	static char score_string[7] = {0,0,0,0,0,0,'\0'};
-	score_string[5] = '0' + board->score % 10;
-	score_string[4] = '0' + board->score % 100 / 10;
-	score_string[3] = '0' + board->score % 1000 / 100;
-	score_string[2] = '0' + board->score % 10000 / 1000;
-	score_string[1] = '0' + board->score % 100000 /	10000;
-	score_string[0] = '0' + board->score % 1000000 / 100000;
 	RenderString(score_string, transform);
-}
 
-unsigned short BoardCalculateExtraWidth(const Board *board, float width) {
-	if (*sv_queue_size == 0)
-		return 0;
+	transform[2][0] = board->x + board->width + block_w * ((CELL_SIZE + 2.f) / 4.f);
+	transform[2][1] = board->y + board->height + block_h;
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	RenderString(line_string, transform);
 
-	return (short)(width / (float)(board->columns + (g_drawborder ? 2 : 0))) * (CELL_SIZE + 2);
+	transform[2][0] = board->x + board->width + block_w * ((CELL_SIZE + 4.f) / 4.f);
+	transform[2][1] = board->y - block_h * 2;
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	RenderString(level_string, transform);
 }
 
 //Input
@@ -269,6 +313,7 @@ bool BoardInputDown(Board *board) {
 bool BoardInputX(Board *board, int x) {
 	if (BoardCheckMove(board, x, 0)) {
 		board->block.x += x;
+		BoardUpdateGhostY(board);
 		return true;
 	}
 
@@ -277,12 +322,13 @@ bool BoardInputX(Board *board, int x) {
 
 bool BoardInputCCW(Board *board) {
 	BlockRotateCCW(&board->block);
-	
+
 	if (!BoardCheckMove(board, 0, 0)) {
 		BlockRotateCW(&board->block);
 		return false;
 	}
 
+	BoardUpdateGhostY(board);
 	return true;
 }
 bool BoardInputCW(Board *board) {
@@ -293,5 +339,6 @@ bool BoardInputCW(Board *board) {
 		return false;
 	}
 
+	BoardUpdateGhostY(board);
 	return true;
 }

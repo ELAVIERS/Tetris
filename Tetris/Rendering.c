@@ -5,6 +5,8 @@
 #include "Shader.h"
 #include <GL/GL.h>
 
+#define STUPID_UV_OFFSET 0.00001f
+
 void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_transform, const Quad* quad, unsigned int level) {
 	Mat3 transform;
 
@@ -21,11 +23,21 @@ void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_trans
 				unsigned short divsx = (short)(1.f / quad->uv_w + 0.5f);
 				unsigned short divsy = (short)(1.f / quad->uv_h + 0.5f);
 
-				ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (float)(index % divsx) * quad->uv_w + .00005f, (float)(index / divsx) * quad->uv_h);
+				ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (float)(index % divsx) * quad->uv_w, (float)(index / divsx) * quad->uv_h + STUPID_UV_OFFSET);
 
 				QuadRender(quad);
 			};
 		}
+}
+
+void RenderRect(float x, float y, float w, float h) {
+	Mat3 transform;
+
+	Mat3Identity(transform);
+	Mat3Scale(transform, w, h);
+	Mat3Translate(transform, x, y);
+	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+	QuadRender(g_quads + QUAD_SINGLE);
 }
 
 inline void RenderEdgePart(Mat3 transform, int id) {
@@ -34,10 +46,12 @@ inline void RenderEdgePart(Mat3 transform, int id) {
 	QuadRender(g_quads + QUAD_SINGLE);
 }
 
-void RenderBorder(float x, float y, float w, float h, float bw, float bh) {
+void RenderPanel(float x, float y, float w, float h, float bw, float bh) {
 	Mat3 transform;
 	w -= bw;
 	h -= bh;
+
+	RenderRect(x + bw, y + bh, w - bw, h - bw);
 
 	Mat3Identity(transform);
 	Mat3Scale(transform, bw, bh);
@@ -88,7 +102,7 @@ void RenderString(const char *string, Mat3 transform) {
 		ShaderSetUniformMat3(g_active_shader, "u_transform", copy);
 
 		int id = GetCharID(string[i]);
-		ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (id % divsx) * g_quads[QUAD_FONT].uv_w, 1.f - ((id / divsx + 1.f) * g_quads[QUAD_FONT].uv_h));
+		ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (id % divsx) * g_quads[QUAD_FONT].uv_w, 1.f - ((id / divsx + 1.f) * g_quads[QUAD_FONT].uv_h - STUPID_UV_OFFSET));
 
 		QuadRender(g_quads + QUAD_FONT);
 

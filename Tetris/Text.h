@@ -12,7 +12,7 @@ int GetCharID(char);
 typedef struct {
 	char			*string;
 	unsigned int	x, y;
-	unsigned int	size;
+	float			size;
 
 	GLuint			vao;
 	GLuint			vbo;
@@ -27,7 +27,7 @@ void GenerateTextData(Text*, float uv_size);
 #include "String.h"
 
 //Just an inline to set text struct stuff
-inline void SetTextInfo(Text *text, const char *string, unsigned int x, unsigned int y, unsigned int size) {
+inline void SetTextInfo(Text *text, const char *string, unsigned int x, unsigned int y, float size) {
 	text->string = DupString(string);
 	text->x = x;
 	text->y = y;

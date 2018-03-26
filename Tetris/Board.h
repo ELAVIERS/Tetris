@@ -23,13 +23,14 @@
 	block			the current block
 */
 typedef struct Board_s {
-	int16 x, y;
-	unsigned short width, height;
+	float x, y;
+	float width, height;
 
 	byte **data;
 	byte rows, columns;
 
 	Block block;
+	short ghost_y;
 
 	Text *nametag;
 
@@ -52,14 +53,12 @@ void BoardSetIDSize(Board*, float id_size);
 void BoardReallocNextQueue(Board*, byte visible_elements, byte bag_element_count);
 void BoardRefillQueueSlots(Board *board);
 
-unsigned short BoardCalculateExtraWidth(const Board *board, float width);
-
 //Returns the amount of lines cleared
 int BoardSubmitBlock(Board*);
 
 void BoardUseNextBlock(Board*);
 
-void BoardRender(const Board*);
+void BoardRender(const Board*, bool draw_ghost);
 void BoardRenderText(const Board*);
 
 //Input functions

@@ -244,6 +244,9 @@ void CreateVariables() {
 
 	sv_clears_per_level =	ValueAsFloatPtr(AddDFloat("sv_clears_per_level", 10, true));
 
+	sv_ghost =				ValueAsFloatPtr(AddDFloat("sv_ghost", 1.f, true));
+	sv_hard_drop =			ValueAsFloatPtr(AddDFloat("sv_hard_drop", 1.f, true));
+
 	axis_x =				ValueAsFloatPtr(AddDFloat("axis_x", 0, false));
 	axis_down =				ValueAsFloatPtr(AddDFloat("axis_down", 0, false));
 

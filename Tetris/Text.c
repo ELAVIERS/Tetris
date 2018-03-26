@@ -71,7 +71,7 @@ void GenerateTextData(Text *text, float uv_size) {
 		if (index >= 0)
 		{
 			float uvx = (index % (int)divs) / divs;
-			float uvy = (divs - 1 - (index / (int)divs)) / divs;
+			float uvy = (divs - 1 - (index / (int)divs)) / divs + 0.00001f; //Oh dear
 
 			verts[i].position[0] = cx;
 			verts[i].position[1] = (float)text->y;

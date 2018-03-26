@@ -103,12 +103,13 @@ void ClearBlockCounts() {
 
 void RenderBlockPanel(Mat3 transform, float border_width, unsigned int level) {
 	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
-	ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
+
 	glBindTexture(GL_TEXTURE_2D, 0);
-	QuadRender(g_quads + QUAD_SINGLE);
 
 	if (g_drawborder)
-		RenderBorder(0, 0, transform[0][0], transform[1][1], border_width, border_width);
+		RenderPanel(0, 0, transform[0][0], transform[1][1], border_width, border_width);
+	else
+		RenderRect(0, 0, transform[0][0], transform[1][1]);
 
 	unsigned int total_rows = 0;
 	for (unsigned int i = 0; i < type_count; ++i)

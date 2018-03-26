@@ -254,9 +254,9 @@ void GameFrame() {
 void GameRender() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Mat3 transform;
-	Mat3Identity(transform);
-	Mat3Scale(transform, 256, 512);
+	Mat3 stats_transform;
+	Mat3Identity(stats_transform);
+	Mat3Scale(stats_transform, 256, 512);
 
 	if (board_count) {
 		UseGLProgram(shader);
@@ -272,10 +272,10 @@ void GameRender() {
 		ShaderSetUniformMat3(shader, "u_projection", g_projection);
 
 		if (board_count == 1)
-			RenderBlockPanel(transform, 16, boards[0].level);
+			RenderBlockPanel(stats_transform, 16, boards[0].level);
 
 		for (unsigned int i = 0; i < board_count; ++i)
-			BoardRender(boards + i);
+			BoardRender(boards + i, *sv_ghost);
 	}
 
 	UseGLProgram(textshader);
@@ -283,10 +283,7 @@ void GameRender() {
 
 	if (board_count) {
 		if (board_count == 1)
-			RenderBlockCounts(transform, 16);
-
-		static float red[3] = { 1.f, 0.f, 0.f };
-		ShaderSetUniformVec3(g_active_shader, "u_colour", red);
+			RenderBlockCounts(stats_transform, 16);
 
 		for (unsigned int i = 0; i < board_count; ++i)
 			BoardRenderText(boards + i);
@@ -383,6 +380,12 @@ void GameEnd() {
 	board_count = 0;
 }
 
+inline void ConstrainBoardNameTag(Board *board, float field_width) {
+	size_t len = strlen(board->nametag->string);
+	if (len * board->nametag->size > field_width)
+		board->nametag->size = field_width / (float)len;
+}
+
 void GameSizeUpdate(unsigned short w, unsigned short h) {
 	if (board_count == 0)
 		return;
@@ -394,60 +397,64 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 		h = (short)rect.bottom;
 	}
 
-	unsigned short rows = boards[0].rows + (g_drawborder ? 2 : 0);
-	unsigned short columns = boards[0].columns + (g_drawborder ? 2 : 0);
+	unsigned short rows = boards[0].rows + (g_drawborder ? 2 : 0) + 6;
+	unsigned short columns = boards[0].columns + (g_drawborder ? 2 : 0) + 6;
 
-	unsigned short board_width = (short)(h * (float)columns / (float)rows);
-	unsigned short board_width_extra = BoardCalculateExtraWidth(boards + 0, board_width);
+	float cell_width = (h * (float)columns / (float)rows);
+	float cell_height;
 
-	unsigned short board_height;
-	unsigned short x = 0, y;
+	float board_w, inner_board_w, board_h;
+
+	float x = 0, y;
 	float spacing = *cl_gap;
 	float gap;
 
-	if ((board_width + board_width_extra) * board_count + spacing * (board_count - 1) > w) {
-		board_width = (int)((w - (spacing * (board_count - 1))) / board_count);
-		board_width_extra = BoardCalculateExtraWidth(boards + 0, board_width);
-
-		unsigned short board_width2 = (short)(board_width * (float)board_width / (float)(board_width + board_width_extra));
-		board_width_extra = (short)(board_width * (float)board_width_extra / (float)(board_width + board_width_extra));
-		board_width = board_width2;
-
-		board_height = (int)(board_width * ((float)rows / (float)columns));
-		y = (h - board_height) / 2;
-		gap = board_width + board_width_extra + spacing;
+	if (cell_width * board_count + spacing * (board_count - 1) > w) {
+		cell_width = (float)(w - (spacing * (board_count - 1))) / (float)board_count;
+		cell_height = (cell_width * ((float)rows / (float)columns));
+		y = ((float)h - cell_height) / 2.f;
+		gap = cell_width + spacing;
 	}
 	else {
-		board_height = h;
+		cell_height = h;
 		y = 0;
 
 		if (board_count == 1) {
-			x = w / 2 - (board_width + board_width_extra) / 2;
+			x = (float)w / 2.f - cell_width / 2.f;
 			gap = 0;
 		}
 		else
-			gap = board_width + board_width_extra + (float)(w - (board_width + board_width_extra) * board_count) / (float)(board_count - 1);
+			gap = cell_width + (float)(w - cell_width * board_count) / (float)(board_count - 1);
 	}
+
+	board_w = (float)cell_width / (float)columns * (columns - 6);
+	inner_board_w = (float)cell_width / (float)columns * (columns - 8);
+	board_h = (float)cell_height / (float)rows * (rows - 6);
+	y += (float)cell_height / (float)rows * 3;
 
 	for (unsigned int i = 0; i < board_count; ++i) {
-		boards[i].width = board_width;
-		boards[i].height = board_height;
+		boards[i].width = board_w;
+		boards[i].height = board_h;
 		boards[i].x = (short)(x + gap * i);
 		boards[i].y = y;
+
+		boards[i].nametag->size = (float)cell_height / (float)rows;
+		ConstrainBoardNameTag(boards + i, inner_board_w);
+		GenerateTextData(boards[i].nametag, Font_UVSize(&g_font));
 	}
 
-	float u = (float)w / (float)g_textures[TEX_BG].width * 8.f / ((float)board_width / (float)columns);
+	float u = (float)w / (float)g_textures[TEX_BG].width * 8.f / ((float)cell_width / (float)columns);
 
 	QuadSetData(&bgquad,
 		u,
-		(float)h / (float)g_textures[TEX_BG].height * 8.f / ((float)board_height / (float)rows));
+		(float)h / (float)g_textures[TEX_BG].height * 8.f / ((float)cell_height / (float)rows));
 
 	bg_offset[0] = -1.f * ((float)x / (float)w) * u;
 	bg_offset[1] = 0.f;
 }
 
 void GameInputDrop() {
-	if (board_count && !g_paused) {
+	if (board_count && !g_paused && *sv_hard_drop) {
 		scoring_drop_start_y = boards[0].block.y;
 
 		signed short lastx, lasty;
@@ -480,7 +487,7 @@ void GameBoardSetName(int id, const char *name) {
 
 	free(boards[id].nametag->string);
 	boards[id].nametag->string = DupString(name);
-	GenerateTextData(boards[id].nametag, Font_UVSize(&g_font));
+	GameSizeUpdate(0, 0);
 }
 
 void GameBoardSetLevel(int id, uint16 level) {
@@ -493,6 +500,12 @@ void GameBoardSetScore(int id, uint32 score) {
 	if (board_count == 0) return;
 
 	boards[id].score = score;
+}
+
+void GameBoardSetLineClears(int id, uint16 line_clears) {
+	if (board_count == 0) return;
+
+	boards[id].line_clears = line_clears;
 }
 
 void GameBoardSetBlockPos(int id, signed short x, signed short y) {
@@ -552,9 +565,8 @@ void GameBoardClear(int id) {
 		boards[0].next_queue[0] = 0xFF;
 		BoardRefillQueueSlots(boards + 0);
 	}
-	else {
+	else
 		boards[id].visible_queue_length = 0;
-	}
 }
 
 void GameSendAllBoardData(int playerid) {

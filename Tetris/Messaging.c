@@ -129,6 +129,7 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		break;
 	case SVMSG_LINESCORE:
 		LobbySetClientLineScore(message[1], BufferToInt32(message + 2));
+		GameBoardSetLineClears(ClientIDToBoardID(message[1]), BufferToInt16(message + 2));
 		break;
 	case SVMSG_TEXT:
 		switch (message[1]) {
@@ -174,6 +175,9 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		break;
 	case SVMSG_CLEAR:
 		GameBoardClear(ClientIDToBoardID(message[1]));
+		LobbySetClientLevel(message[1], 0);
+		LobbySetClientScore(message[1], 0);
+		LobbySetClientLineScore(message[1], 0);
 		break;
 
 	case SVMSG_START:
