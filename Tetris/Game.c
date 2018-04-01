@@ -220,8 +220,12 @@ void GameFrame() {
 		if (*axis_down != axis_down_prev) {
 			axis_down_prev = *axis_down;
 
-			if (*axis_down)
+			drop_timer = 0;
+
+			if (*axis_down) {
 				scoring_drop_start_y = boards[0].block.y;
+				MoveDown();
+			}
 			else
 				scoring_drop_start_y = 0;
 		}
@@ -408,7 +412,7 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 		h = (short)rect.bottom;
 	}
 
-	unsigned short rows = boards[0].rows + (g_drawborder ? 2 : 0) + 6;
+	unsigned short rows = boards[0].visible_rows + (g_drawborder ? 2 : 0) + 6;
 	unsigned short columns = boards[0].columns + (g_drawborder ? 2 : 0) + 6;
 
 	float cell_width = (h * (float)columns / (float)rows);
