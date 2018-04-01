@@ -159,5 +159,3 @@ void ServerReceiveMessage(const byte *data, uint16 length, byte playerid);
 void ClientReceiveMessage(const byte *data, uint16 length);
 
 void MessageServerString(MessageID type, const char *string);
-
-void CFunc_Send(const char **tokens, unsigned int count);

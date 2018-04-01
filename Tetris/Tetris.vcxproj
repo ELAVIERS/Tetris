@@ -183,6 +183,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClCompile Include="Globals.c" />
     <ClCompile Include="IO.c" />
     <ClCompile Include="InputManager.c" />
+    <ClCompile Include="LevelManager.c" />
     <ClCompile Include="Lobby.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Matrix.c" />
@@ -199,6 +200,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClCompile Include="String.c" />
     <ClCompile Include="Text.c" />
     <ClCompile Include="Texture.c" />
+    <ClCompile Include="TextureManager.c" />
     <ClCompile Include="Timing.c" />
     <ClCompile Include="Console.c" />
     <ClCompile Include="Variables.c" />
@@ -218,6 +220,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="Globals.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="LevelManager.h" />
     <ClInclude Include="Lobby.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Menu.h" />
@@ -233,6 +236,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="String.h" />
     <ClInclude Include="Text.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Timing.h" />
     <ClInclude Include="Console.h" />
     <ClInclude Include="Types.h" />

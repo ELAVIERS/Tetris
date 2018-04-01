@@ -30,13 +30,3 @@ void SendBlockInfo(int playerid);
 void ClearBlockCounts();
 void RenderBlockPanel(Mat3 transform, float block_size, unsigned int level);
 void RenderBlockCounts(Mat3 transform, float block_size);
-
-//Texture Levels
-
-short TextureLevelIDIndex(unsigned int level, char id);
-
-DFunc
-	CLSetTextureIndexOrder,
-	CLAddTextureLevel;
-
-void ClearTextureLevels();

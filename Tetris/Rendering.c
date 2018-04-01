@@ -2,6 +2,7 @@
 #include "Block.h"
 #include "BlockManager.h"
 #include "Globals.h"
+#include "LevelManager.h"
 #include "Shader.h"
 #include <GL/GL.h>
 

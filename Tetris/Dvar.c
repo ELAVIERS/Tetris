@@ -233,7 +233,7 @@ void SetDvar(Dvar *dvar, DvarValue value, bool print) {
 		PrintValue(dvar);
 }
 
-char* DvarAllocValueString(const Dvar  *dvar) {
+char* DvarAllocValueString(const Dvar *dvar) {
 	switch (dvar->type) {
 	case DVT_STRING:
 		return DupString(dvar->value.string);

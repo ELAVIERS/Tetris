@@ -29,9 +29,8 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 
 	switch (message[0]) {
 	case SVMSG_COMMAND:
-		if (ServerClientIsAdmin(playerid)) {
-			ServerBroadcast(message, (uint16)strlen(message + 1) + 2);
-		}
+		if (ServerClientIsAdmin(playerid))
+			ServerBroadcast(message, length, true);
 		else {
 			byte deny[] = { SVMSG_TEXT, SVTEXT_DENIED };
 			ServerSend(playerid, deny, sizeof(deny));
@@ -42,14 +41,14 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 	case SVMSG_CHAT:
 		buffer[1] = playerid;
 		strcpy_s(buffer + 2, MSG_LEN - 3, message + 1);
-		ServerBroadcast(buffer, (uint16)strlen(buffer + 2) + 3);
+		ServerBroadcast(buffer, (uint16)strlen(buffer + 2) + 3, true);
 		break;
 
 	case SVMSG_JOIN:
 	case SVMSG_PLACE:
 	case SVMSG_CLEAR:
 		buffer[1] = playerid;
-		ServerBroadcast(buffer, 2);
+		ServerBroadcast(buffer, 2, true);
 		break;
 
 	case SVMSG_LEAVE:
@@ -63,21 +62,21 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 		buffer[3] = message[2];
 		buffer[4] = message[3];
 		buffer[5] = message[4];
-		ServerBroadcast(buffer, 6);
+		ServerBroadcast(buffer, 6, true);
 		break;
 
 	case SVMSG_BLOCKDATA:
 		buffer[1] = playerid;
 		buffer[2] = message[1];
 		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2] * buffer[2]);
-		ServerBroadcast(buffer, 3 + buffer[2] * buffer[2]);
+		ServerBroadcast(buffer, 3 + buffer[2] * buffer[2], true);
 		break;
 
 	case SVMSG_QUEUE:
 		buffer[1] = playerid;
 		buffer[2] = message[1];
 		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2]);
-		ServerBroadcast(buffer, 3 + buffer[2]);
+		ServerBroadcast(buffer, 3 + buffer[2], true);
 		break;
 
 	case SVMSG_REQUEST:

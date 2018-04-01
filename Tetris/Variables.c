@@ -3,110 +3,11 @@
 #include "Console.h"
 #include "Game.h"
 #include "Globals.h"
+#include "LevelManager.h"
 #include "Messaging.h"
 #include "Server.h"
+#include "TextureManager.h"
 #include <stdlib.h>
-
-/*
-	Texture stuff
-*/
-
-inline int GetTexID(const char *string) {
-	#define IF_ID(STRING, ID) if (strcmp(STRING, ID) == 0)
-
-			IF_ID(string, "font") return TEX_FONT;
-	else	IF_ID(string, "block") return TEX_BLOCK;
-	else	IF_ID(string, "ul") return TEX_UL;
-	else	IF_ID(string, "u")	return TEX_U;
-	else	IF_ID(string, "ur")	return TEX_UR;
-	else	IF_ID(string, "l")	return TEX_L;
-	else	IF_ID(string, "r")	return TEX_R;
-	else	IF_ID(string, "bl")	return TEX_BL;
-	else	IF_ID(string, "b")	return TEX_B;
-	else	IF_ID(string, "br")	return TEX_BR;
-	else	IF_ID(string, "bg") return TEX_BG;
-
-	return -1;
-}
-
-inline bool ShouldDrawBorder() {
-	if (g_textures[TEX_UL].glid != 0 ||
-		g_textures[TEX_U].glid != 0 ||
-		g_textures[TEX_UR].glid != 0 ||
-		g_textures[TEX_L].glid != 0 ||
-		g_textures[TEX_R].glid != 0 ||
-		g_textures[TEX_BL].glid != 0 ||
-		g_textures[TEX_B].glid != 0 ||
-		g_textures[TEX_BR].glid != 0)
-		return true;
-
-	return false;
-}
-
-void SetTextIndexSize(int id, float size) {
-	switch (id) {
-	case TEX_FONT:
-		g_font.char_size = size;
-
-		Font_RegenerateText(&g_font);
-		QuadSetData(g_quads + QUAD_FONT, size / (float)g_font.texture->width, size / (float)g_font.texture->height);
-		break;
-
-	case TEX_BLOCK:
-		GameSetBlockIDSize(size);
-		break;
-	}
-}
-
-void FUNC_SetTextureIndexSize(const char **tokens, unsigned int count) {
-	if (count < 2) return;
-
-	int id = GetTexID(tokens[0]);
-	if (id < 0) return;
-
-	SetTextIndexSize(id, (float)atof(tokens[1]));
-}
-
-void FUNC_SetTexture(const char **tokens, unsigned int count) {
-	if (count < 2) return;
-
-	int id = GetTexID(tokens[0]);
-	if (id < 0) return;
-
-	TextureFromFile(tokens[1], g_textures + GetTexID(tokens[0]));
-
-	if (id == TEX_BG) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	}
-	else {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	}
-
-	if (count > 2)
-		SetTextIndexSize(id, (float)atof(tokens[2]));
-
-	switch (id) {
-		case TEX_FONT:
-			if (count < 3)
-				SetTextIndexSize(id, g_font.char_size);
-			break;
-
-		case TEX_BG:
-			GameSizeUpdate(0, 0);
-			break;
-		}
-
-	bool prev = g_drawborder;
-	g_drawborder = ShouldDrawBorder();
-	if (g_drawborder != prev)
-		GameSizeUpdate(0, 0);
-}
-
-/////////
-//////////
-////////////
 
 void C_Name(DvarValue strvalue) {
 	MessageServerString(SVMSG_NAME, strvalue.string);
@@ -215,6 +116,9 @@ void CreateVariables() {
 	AddDCall("clear_binds", ClearBinds, false);
 	bind_print = ValueAsFloatPtr(AddDFloat("bind_print", 0.f, false));
 
+	AddDFunction("sv_bindlevel", AddLevelBind, true);
+	AddDCall("sv_clear_level_binds", ClearLevelBinds, true);
+
 	AddDFloat("sv_playercount", 4, true);
 	AddDString("sv_port", "7777", true);
 
@@ -227,28 +131,30 @@ void CreateVariables() {
 	AddDFunction("cl_blockid_order", CLSetTextureIndexOrder, false);
 	AddDCall("cl_blockids_clear", ClearTextureLevels, false);
 
-	AddDFunction("cl_set_tex", FUNC_SetTexture, false);
-	AddDFunction("cl_set_texid_size", FUNC_SetTextureIndexSize, false);
+	AddDFunction("cl_set_tex", CLSetTexture, false);
+	AddDFunction("cl_set_texid_size", CLSetTextureIndexSize, false);
 	AddDCall("cl_textures_clear", G_ClearTextures, false);
 
-	sv_bag_size =			ValueAsFloatPtr(AddDFloatC("sv_bag_size", 0, C_BagSize, true));
-	sv_queue_size =			ValueAsFloatPtr(AddDFloatC("sv_queue_size", 4, C_QueueSize, true));
+	sv_bag_size =				ValueAsFloatPtr(AddDFloatC("sv_bag_size", 0, C_BagSize, true));
+	sv_queue_size =				ValueAsFloatPtr(AddDFloatC("sv_queue_size", 4, C_QueueSize, true));
 	
-	sv_gravity =			ValueAsFloatPtr(AddDFloat("sv_gravity", 0.5f, true));
-	sv_drop_gravity =		ValueAsFloatPtr(AddDFloat("sv_drop_gravity", 0.05f, true));
-	sv_autorepeat =			ValueAsFloatPtr(AddDFloat("sv_autorepeat", 0.05f, true));
-	sv_autorepeat_delay =	ValueAsFloatPtr(AddDFloat("sv_autorepeat_delay", 0.25f, true));
+	sv_gravity =				ValueAsFloatPtr(AddDFloat("sv_gravity", 0.5f, true));
+	sv_drop_gravity =			ValueAsFloatPtr(AddDFloat("sv_drop_gravity", 0.5f, true));
+	sv_drop_gravity_is_factor =	ValueAsFloatPtr(AddDFloat("sv_drop_gravity_is_factor", 0, true));
+	sv_autorepeat =				ValueAsFloatPtr(AddDFloat("sv_autorepeat", 0.05f, true));
+	sv_autorepeat_delay =		ValueAsFloatPtr(AddDFloat("sv_autorepeat_delay", 0.25f, true));
 
-	sv_board_width =		ValueAsFloatPtr(AddDFloat("sv_board_width", 10, true));
-	sv_board_height =		ValueAsFloatPtr(AddDFloat("sv_board_height", 20, true));
+	sv_board_width =			ValueAsFloatPtr(AddDFloat("sv_board_width", 10, true));
+	sv_board_height =			ValueAsFloatPtr(AddDFloat("sv_board_height", 20, true));
+	sv_board_real_height =		ValueAsFloatPtr(AddDFloat("sv_board_real_height", 22, true));
 
-	sv_clears_per_level =	ValueAsFloatPtr(AddDFloat("sv_clears_per_level", 10, true));
+	sv_clears_per_level =		ValueAsFloatPtr(AddDFloat("sv_clears_per_level", 10, true));
 
-	sv_ghost =				ValueAsFloatPtr(AddDFloat("sv_ghost", 1.f, true));
-	sv_hard_drop =			ValueAsFloatPtr(AddDFloat("sv_hard_drop", 1.f, true));
+	sv_ghost =					ValueAsFloatPtr(AddDFloat("sv_ghost", 1.f, true));
+	sv_hard_drop =				ValueAsFloatPtr(AddDFloat("sv_hard_drop", 1.f, true));
 
-	axis_x =				ValueAsFloatPtr(AddDFloat("axis_x", 0, false));
-	axis_down =				ValueAsFloatPtr(AddDFloat("axis_down", 0, false));
+	axis_x =					ValueAsFloatPtr(AddDFloat("axis_x", 0, false));
+	axis_down =					ValueAsFloatPtr(AddDFloat("axis_down", 0, false));
 
 	AddDCall("dbg_create_bag", DBGCreateBag, false);
 }

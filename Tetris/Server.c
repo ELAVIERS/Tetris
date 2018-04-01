@@ -58,9 +58,13 @@ void ServerSend(int slot, const byte *buffer, uint16 length) {
 		NetworkSend(slots[slot].socket, buffer, length);
 }
 
-void ServerBroadcast(const byte *buffer, uint16 count) {
+void ServerBroadcast(const byte *buffer, uint16 length, bool include_local) {
 	for (int i = 0; i < slot_count; ++i)
-		ServerSend(i, buffer, count);
+		if (slots[i].local) {
+			if (include_local)
+				ClientReceiveMessage(buffer, length);
+		}
+		else NetworkSend(slots[i].socket, buffer, length);
 }
 
 void ServerReceive(int id) {
@@ -78,7 +82,7 @@ void ServerReceive(int id) {
 			ServerDisconnectSlot(id);
 
 			byte message[] = { SVMSG_LEAVE, (byte)id, 0 };
-			ServerBroadcast(message, sizeof(message));
+			ServerBroadcast(message, sizeof(message), true);
 		}
 	}
 }

@@ -5,6 +5,7 @@
 #include "Console.h"
 #include "Error.h"
 #include "Globals.h"
+#include "LevelManager.h"
 #include "Lobby.h"
 #include "Menu.h"
 #include "Messaging.h"
@@ -45,7 +46,13 @@ void DBGNextLevel() {
 		return;
 	}
 
-	if (board_count) ++boards[0].level;
+	if (board_count) {
+		byte message[4] = { SVMSG_LEVEL, 0 };
+		Int16ToBuffer(boards[0].level + 1, message + 2);
+		ServerBroadcast(message, 4, true);
+
+		ExecLevelBind(boards[0].level, 0);
+	};
 }
 
 void GameInit() {
@@ -148,7 +155,7 @@ inline void GameBoardSubmitBlock(int id) {
 		boards[id].line_clears += clears;
 		message[0] = SVMSG_LINESCORE;
 		Int32ToBuffer(boards[id].line_clears, message + 2);
-		ServerBroadcast(message, 6);
+		ServerBroadcast(message, 6, false);
 
 		boards[id].level_clears += clears;
 
@@ -160,7 +167,9 @@ inline void GameBoardSubmitBlock(int id) {
 
 		if (message[0] == SVMSG_LEVEL) {
 			Int16ToBuffer(boards[id].level, message + 2);
-			ServerBroadcast(message, 4);
+			ServerBroadcast(message, 4, false);
+
+			ExecLevelBind(boards[id].level, id);
 		}
 	}
 }
@@ -218,7 +227,7 @@ void GameFrame() {
 		}
 
 		if (*axis_down) {
-			if (drop_timer >= *sv_drop_gravity) {
+			if (drop_timer >= (*sv_drop_gravity_is_factor ? *sv_gravity : 1.f) * *sv_drop_gravity) {
 				drop_timer = 0.f;
 				MoveDown();
 			}
@@ -329,12 +338,14 @@ void GameBegin(int playercount) {
 	board_count = playercount;
 	boards = (Board*)malloc(board_count * sizeof(Board));
 
-	byte rows = (byte)*sv_board_height;
+	byte rows = (byte)*sv_board_real_height;
 	byte columns = (byte)*sv_board_width;
+	byte render_rows = (byte)*sv_board_height;
 
 	for (unsigned int i = 0; i < board_count; ++i) {
 		boards[i].rows = rows;
 		boards[i].columns = columns;
+		boards[i].visible_rows = render_rows;
 
 		BoardCreate(boards + i);
 		BoardClear(boards + i);
@@ -567,6 +578,9 @@ void GameBoardClear(int id) {
 	}
 	else
 		boards[id].visible_queue_length = 0;
+
+	if (!IsRemoteClient())
+		ExecLevelBind(0, id);
 }
 
 void GameSendAllBoardData(int playerid) {

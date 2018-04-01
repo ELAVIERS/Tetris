@@ -58,13 +58,13 @@ bool BoardCheckMove(const Board *board, short x, short y) {
 
 void BoardUpdateGhostY(Board *board) {
 	int i;
-	for (i = 0; BoardCheckMove(board, 0, i); --i);
+	for (i = 0; BoardCheckMove(board, 0, i - 1); --i);
 
-	board->ghost_y = board->block.y + i + 1;
+	board->ghost_y = board->block.y + i;
 }
 
 void BoardUseNextBlock(Board *board) {
-	CreateNewBlock(GetNextIndexInQueue(board), &board->block, board->rows - 1);
+	CreateNewBlock(GetNextIndexInQueue(board), &board->block, board->visible_rows - 1);
 
 	BoardUpdateGhostY(board);
 }
@@ -171,11 +171,11 @@ int BoardSubmitBlock(Board *board) {
 void BoardRender(const Board *board, bool draw_ghost) {
 	Mat3 transform;
 	float block_w = board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
-	float block_h = board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+	float block_h = board->height / (float)(board->visible_rows + (g_drawborder ? 2 : 0));
 
 	float x = board->x + (g_drawborder ? block_w : 0.f);
 	float y = board->y + (g_drawborder ? block_h : 0.f);
-	float h = block_h * (board->rows - (g_drawborder ? 0 : 2));
+	float h = block_h * (board->visible_rows - (g_drawborder ? 0 : 2));
 
 	float nextblock_size = h / (float)(CELL_SIZE * board->visible_queue_length);
 	if (nextblock_size > block_w)
@@ -204,7 +204,7 @@ void BoardRender(const Board *board, bool draw_ghost) {
 		RenderPanel((float)(board->x + board->width), (float)board->y, block_w * (CELL_SIZE + 2), board->height, block_w, block_h);
 	}
 	else {
-		RenderRect(x, y, block_w * board->columns, block_h * board->rows);
+		RenderRect(x, y, block_w * board->columns, block_h * board->visible_rows);
 
 		RenderRect(board->x + board->width + block_w, board->y + block_h, block_w * CELL_SIZE, h);
 	}
@@ -214,7 +214,7 @@ void BoardRender(const Board *board, bool draw_ghost) {
 	Mat3Identity(transform);
 	Mat3Scale(transform, block_w, block_h);
 	Mat3Translate(transform, x, y);
-	RenderTileBuffer(&board->data[0][0], board->rows, board->columns, transform, g_quads + QUAD_BLOCK, board->level);
+	RenderTileBuffer(&board->data[0][0], board->visible_rows, board->columns, transform, g_quads + QUAD_BLOCK, board->level);
 
 	if (draw_ghost) {
 		Mat3Translate(transform, board->block.x * block_w, board->ghost_y * block_h);
@@ -224,8 +224,13 @@ void BoardRender(const Board *board, bool draw_ghost) {
 	}
 	else transform[2][0] = x + board->block.x * block_w;
 
+	byte renderheight;
+	if (board->block.y + board->block.size > board->visible_rows)
+		renderheight = board->visible_rows - board->block.y;
+	else renderheight = board->block.size;
+
 	transform[2][1] = y + board->block.y * block_h;
-	RenderTileBuffer(board->block.data, board->block.size, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
+	RenderTileBuffer(board->block.data, renderheight, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
 
 	if (board->visible_queue_length) {
 		Mat3Identity(transform);
@@ -244,7 +249,7 @@ void BoardRender(const Board *board, bool draw_ghost) {
 void BoardRenderText(const Board *board) {
 	Mat3 transform;
 	float block_w = board->width / (float)(board->columns + (g_drawborder ? 2 : 0));
-	float block_h = board->height / (float)(board->rows + (g_drawborder ? 2 : 0));
+	float block_h = board->height / (float)(board->visible_rows + (g_drawborder ? 2 : 0));
 
 	Mat3Identity(transform);
 	Mat3Translate(transform, board->x + block_w + 4, board->y + board->height + block_h);

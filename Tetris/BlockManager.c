@@ -3,8 +3,11 @@
 #include "Game.h"
 #include "Globals.h"
 #include "Matrix.h"
+#include "Messaging.h"
 #include "Rendering.h"
+#include "Server.h"
 #include "Shader.h"
+#include "String.h"
 #include "Types.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -67,6 +70,17 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 	int sizesq = (int)strlen(tokens[1]);
 	int size = PerfectSqrt(sizesq);
 	if (size == 0) return;
+
+	//Tell clients too!
+	{
+		byte message[256] = { SVMSG_COMMAND };
+		char *string = CombineTokens(tokens, count);
+		strcpy_s(message + 1, 256 - 1, "sv_blocks_add ");
+		strcat_s(message + 1, 256 - 1, string);
+
+		ServerBroadcast(message, (uint16)strlen(message + 1) + 2, false);
+		free(string);
+	}
 
 	int last = type_count;
 	++type_count;
@@ -159,10 +173,6 @@ void RenderBlockCounts(Mat3 transform, float border_width) {
 	}
 }
 
-#include "Messaging.h"
-#include "Server.h"
-#include "String.h"
-
 #define FIRST_ARG_LOC 15
 
 void SendBlockInfo(int playerid) {
@@ -205,76 +215,4 @@ void SendBlockInfo(int playerid) {
 
 		ServerSend(playerid, message, msgindex + 1);
 	}
-}
-
-//Texture Levels
-
-typedef struct {
-	char block_id;
-	short index;
-} TextureBinding;
-
-typedef struct TextureLevel_s {
-	TextureBinding *texdata;
-	unsigned int texdata_size;
-} TextureLevel;
-
-TextureLevel *levels = NULL;
-unsigned int level_count = 0;
-
-short TextureLevelIDIndex(unsigned int level, char id) {
-	level %= level_count;
-
-	for (unsigned int i = 0; i < levels[level].texdata_size; ++i)
-		if (levels[level].texdata[i].block_id == id)
-			return levels[level].texdata[i].index;
-
-	return -1;
-}
-
-char **id_groups;
-unsigned int group_count = 0;
-unsigned int blockid_count;
-
-void CLSetTextureIndexOrder(const char **tokens, unsigned int count) {
-	FreeTokens(id_groups, group_count);
-
-	id_groups = (char**)malloc(count * sizeof(char*));
-
-	blockid_count = 0;
-	for (unsigned int i = 0; i < count; ++i) {
-		id_groups[i] = DupString(tokens[i]);
-		blockid_count += (unsigned int)strlen(tokens[i]);
-	}
-
-	group_count = count;
-}
-
-void CLAddTextureLevel(const char **tokens, unsigned int count) {
-	if (count != group_count) {
-		ConsolePrint("Error : Invalid argument count\n");
-		return;
-	}
-
-	unsigned int last = level_count;
-	++level_count;
-	levels = (TextureLevel*)realloc(levels, level_count * sizeof(TextureLevel));
-	levels[last].texdata = (TextureBinding*)malloc(blockid_count * sizeof(TextureBinding));
-	levels[last].texdata_size = blockid_count;
-
-	unsigned int counter = 0;
-	for (unsigned int i = 0; i < group_count; ++i) {
-		short texid = (short)atoi(tokens[i]);
-		for (const char *c = id_groups[i]; *c != '\0'; ++c) {
-			levels[last].texdata[counter].block_id = *c;
-			levels[last].texdata[counter].index = texid;
-			++counter;
-		}
-	}
-}
-
-void ClearTextureLevels() {
-	free(levels);
-	levels = NULL;
-	level_count = 0;
 }

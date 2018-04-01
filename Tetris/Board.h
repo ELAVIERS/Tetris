@@ -27,7 +27,7 @@ typedef struct Board_s {
 	float width, height;
 
 	byte **data;
-	byte rows, columns;
+	byte rows, columns, visible_rows;
 
 	Block block;
 	short ghost_y;
