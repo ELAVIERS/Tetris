@@ -58,13 +58,14 @@ void ServerSend(int slot, const byte *buffer, uint16 length) {
 		NetworkSend(slots[slot].socket, buffer, length);
 }
 
-void ServerBroadcast(const byte *buffer, uint16 length, bool include_local) {
+void ServerBroadcast(const byte *buffer, uint16 length, int sender) {
 	for (int i = 0; i < slot_count; ++i)
-		if (slots[i].local) {
-			if (include_local)
+		if (i != sender) {
+			if (slots[i].local)
 				ClientReceiveMessage(buffer, length);
+			else if (slots[i].socket != INVALID_SOCKET)
+				NetworkSend(slots[i].socket, buffer, length);
 		}
-		else NetworkSend(slots[i].socket, buffer, length);
 }
 
 void ServerReceive(int id) {

@@ -1,4 +1,5 @@
 #include "BlockManager.h"
+#include "Client.h"
 #include "Console.h"
 #include "Game.h"
 #include "Globals.h"
@@ -71,14 +72,12 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 	int size = PerfectSqrt(sizesq);
 	if (size == 0) return;
 
-	//Tell clients too!
-	{
-		byte message[256] = { SVMSG_COMMAND };
+	if (!IsRemoteClient()) {
+		byte message[256] = { SVMSG_COMMAND, "sv_blocks_add " };
 		char *string = CombineTokens(tokens, count);
-		strcpy_s(message + 1, 256 - 1, "sv_blocks_add ");
 		strcat_s(message + 1, 256 - 1, string);
 
-		ServerBroadcast(message, (uint16)strlen(message + 1) + 2, false);
+		ServerBroadcast(message, (uint16)strlen(message + 1) + 2, 0);
 		free(string);
 	}
 
@@ -102,6 +101,11 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 }
 
 void ClearBlocks() {
+	if (!IsRemoteClient()) {
+		byte message[] = { SVMSG_COMMAND, "sv_blocks_clear" };
+		ServerBroadcast(message, sizeof(message), 0);
+	}
+
 	for (unsigned int i = 0; i < type_count; ++i)
 		free(blocktypes[i].data);
 

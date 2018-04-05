@@ -48,6 +48,7 @@ typedef enum MessageID_e {
 
 	SVMSG_LEVEL,
 	/*
+		CLIENT
 			1:PLAYER ID (BYTE)
 			2:LEVEL (INT16)
 	*/
@@ -139,6 +140,14 @@ typedef enum MessageID_e {
 	/*
 		CLIENT
 			1:PLAYER ID (BYTE)
+	*/
+
+	SVMSG_GARBAGE,
+	/*
+		CLIENT
+			1:PLAYER ID (BYTE)
+			2:ROWS (BYTE)
+			3:CLEAR COLUMN (BYTE)
 	*/
 
 	SVMSG_START,

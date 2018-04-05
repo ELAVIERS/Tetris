@@ -21,12 +21,19 @@ void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_trans
 
 				short index = TextureLevelIDIndex(level, buffer[RC1D(columns, r, c)]);
 
-				unsigned short divsx = (short)(1.f / quad->uv_w + 0.5f);
-				unsigned short divsy = (short)(1.f / quad->uv_h + 0.5f);
+				if (index > -1) {
+					unsigned short divsx = (short)(1.f / quad->uv_w + 0.5f);
+					unsigned short divsy = (short)(1.f / quad->uv_h + 0.5f);
 
-				ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (float)(index % divsx) * quad->uv_w, (float)(index / divsx) * quad->uv_h + STUPID_UV_OFFSET);
+					ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", (float)(index % divsx) * quad->uv_w, (float)(index / divsx) * quad->uv_h + STUPID_UV_OFFSET);
 
-				QuadRender(quad);
+					QuadRender(quad);
+				}
+				else {
+					ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
+
+					QuadRender(g_quads + QUAD_SINGLE);
+				}
 			};
 		}
 }

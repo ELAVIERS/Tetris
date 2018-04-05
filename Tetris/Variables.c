@@ -127,6 +127,7 @@ void CreateVariables() {
 
 	AddDFunction("cl_setbgcolour", FUNC_SetBGColour, false);
 
+	AddDFunction("cl_bind_blockid", CLAddTextureBind, false);
 	AddDFunction("cl_blockids_add", CLAddTextureLevel, false);
 	AddDFunction("cl_blockid_order", CLSetTextureIndexOrder, false);
 	AddDCall("cl_blockids_clear", ClearTextureLevels, false);
@@ -146,7 +147,7 @@ void CreateVariables() {
 
 	sv_board_width =			ValueAsFloatPtr(AddDFloat("sv_board_width", 10, true));
 	sv_board_height =			ValueAsFloatPtr(AddDFloat("sv_board_height", 20, true));
-	sv_board_real_height =		ValueAsFloatPtr(AddDFloat("sv_board_real_height", 22, true));
+	sv_board_real_height =		ValueAsFloatPtr(AddDFloat("sv_board_real_height", 40, true));
 
 	sv_clears_per_level =		ValueAsFloatPtr(AddDFloat("sv_clears_per_level", 10, true));
 

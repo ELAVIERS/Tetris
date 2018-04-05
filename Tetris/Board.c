@@ -79,19 +79,6 @@ void BoardCreate(Board *board) {
 	board->nametag = Font_NewText(&g_font);
 	SetTextInfo(board->nametag, DupString("Empty"), 0, 0, 32);
 	GenerateTextData(board->nametag, Font_UVSize(&g_font));
-
-	board->block.size = 0;
-	board->block.data = NULL;
-	board->level = 0;
-	board->score = 0;
-	board->level_clears = 0;
-	board->line_clears = 0;
-
-	board->queue_length = 0;
-	board->visible_queue_length = 0;
-	board->bag_size = 0;
-	board->bag_element_count = 0;
-	board->next_queue = NULL;
 }
 
 void BoardReallocNextQueue(Board *board, byte visible_elements, byte bag_element_count) {
@@ -127,7 +114,7 @@ void BoardSetIDSize(Board *board, float id_size) {
 }
 
 inline bool RowIsFull(Board *board, unsigned int row) {
-	for (unsigned int c = 0; c < board->columns; ++c)
+	for (byte c = 0; c < board->columns; ++c)
 		if (board->data[row][c] == 0)
 			return false;
 
@@ -135,11 +122,11 @@ inline bool RowIsFull(Board *board, unsigned int row) {
 }
 
 inline void ClearRow(Board *board, unsigned int row) {
-	for (unsigned short r = row; r < board->rows - 1; ++r)
-		for (unsigned short c = 0; c < board->columns; ++c)
+	for (byte r = row; r < board->rows - 1; ++r)
+		for (byte c = 0; c < board->columns; ++c)
 			board->data[r][c] = board->data[r + 1][c];
 
-	for (unsigned short c = 0; c < board->columns; ++c)
+	for (byte c = 0; c < board->columns; ++c)
 		board->data[board->rows - 1][c] = 0;
 }
 
@@ -158,12 +145,48 @@ int BoardClearFullLines(Board *board) {
 }
 
 int BoardSubmitBlock(Board *board) {
-	for (unsigned int r = 0; r < board->block.size; ++r)
-		for (unsigned int c = 0; c < board->block.size; ++c)
+	for (byte r = 0; r < board->block.size; ++r)
+		for (byte c = 0; c < board->block.size; ++c)
 			if (board->block.data[RC1D(board->block.size, r, c)])
 				board->data[board->block.y + r][board->block.x + c] = board->block.data[RC1D(board->block.size, r, c)];
 
 	return BoardClearFullLines(board);
+}
+
+byte BoardSubmitGarbageQueue(Board *board) {
+	byte total_rows = 0;
+	for (unsigned int i = 0; i < GARBAGE_QUEUE_SIZE; ++i)
+		total_rows += board->garbage_queue[i].rows;
+
+	if (total_rows) {
+		for (byte r = board->rows - 1; r >= total_rows; --r)
+			for (byte c = 0; c < board->columns; ++c)
+				board->data[r][c] = board->data[r - total_rows][c];
+
+		byte row = 0;
+
+		for (unsigned int i = 0; i < GARBAGE_QUEUE_SIZE; ++i) {
+			for (byte r = 0; r < board->garbage_queue[i].rows; ++r)
+				for (byte c = 0; c < board->columns; ++c)
+					if (c != board->garbage_queue[i].clear_column)
+						board->data[row + r][c] = 'g';
+					else
+						board->data[row + r][c] = 0;
+
+			row += board->garbage_queue[i].rows;
+			board->garbage_queue[i].rows = 0;
+		}
+	}
+
+	return total_rows;
+}
+
+void BoardAddGarbage(Board *board, byte rows, byte clear_column) {
+	unsigned int queue_slot = 0;
+	for (; board->garbage_queue[queue_slot].rows != 0 && queue_slot < GARBAGE_QUEUE_SIZE; ++queue_slot);
+
+	board->garbage_queue[queue_slot].rows += rows;
+	board->garbage_queue[queue_slot].clear_column = clear_column;
 }
 
 #define CELL_SIZE 4

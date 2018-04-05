@@ -6,7 +6,8 @@ short TextureLevelIDIndex(unsigned int level, char id);
 
 DFunc
 	CLSetTextureIndexOrder,
-	CLAddTextureLevel;
+	CLAddTextureLevel,
+	CLAddTextureBind;
 
 void ClearTextureLevels();
 

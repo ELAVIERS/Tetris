@@ -1,7 +1,7 @@
 #include "RNG.h"
 #include <stdlib.h>
 
-inline int RandomIntInRange(int min, int max) {
+int RandomIntInRange(int min, int max) {
 	return (rand() % (max - min)) + min;
 }
 

@@ -1,5 +1,6 @@
 #include "Dvar.h"
 #include "Console.h"
+#include "Client.h"
 #include "Messaging.h"
 #include "Server.h"
 #include "String.h"
@@ -9,7 +10,7 @@
 
 typedef struct DvarNode_s {
 	char key;
-	
+
 	struct DvarNode_s *child;
 	struct DvarNode_s *next;
 
@@ -54,7 +55,7 @@ void AddDvarNode(DvarNode* node, Dvar *dvar, unsigned int depth) {
 				AddDvarNode(node->child, dvar, depth + 1);
 				return;
 			}
-			
+
 			node->child = NewDvarNode(dvar, depth + 1);
 			return;
 		}
@@ -330,7 +331,7 @@ void HandleCommand(const char **tokens, unsigned int count, const char *string, 
 		if (count == 1 && dvar->type != DVT_CALL && dvar->type != DVT_FUNCTION) {
 			PrintValue(dvar);
 		}
-		else if (message_server && dvar->server) {
+		else if (dvar->server && message_server) {
 			if (string)
 				MessageServerString(SVMSG_COMMAND, string);
 			else {
@@ -342,6 +343,20 @@ void HandleCommand(const char **tokens, unsigned int count, const char *string, 
 		else {
 			DvarCommand(dvar, tokens + 1, count - 1, true);
 			PrintValue(dvar);
+		}
+
+		if (dvar->server && !IsRemoteClient() && (dvar->type == DVT_FLOAT || dvar->type == DVT_STRING)) {
+			byte message[256] = { SVMSG_COMMAND };
+
+			if (string)
+				strcpy_s(message + 1, 256 - 1, string);
+			else {
+				char *commandstr = CombineTokens(tokens, count);
+				strcpy_s(message + 1, 256 - 1, commandstr);
+				free(commandstr);
+			}
+
+			ServerBroadcast(message, (uint16)strlen(message + 1) + 2, 0);
 		}
 	}
 

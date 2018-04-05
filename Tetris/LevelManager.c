@@ -16,11 +16,17 @@ typedef struct TextureLevel_s {
 	unsigned int texdata_size;
 } TextureLevel;
 
+TextureBinding *texbinds = NULL;
 TextureLevel *levels = NULL;
+unsigned int texbind_count = 0;
 unsigned int level_count = 0;
 
 short TextureLevelIDIndex(unsigned int level, char id) {
 	level %= level_count;
+
+	for (unsigned int i = 0; i < texbind_count; ++i)
+		if (texbinds[i].block_id == id)
+			return texbinds[i].index;
 
 	for (unsigned int i = 0; i < levels[level].texdata_size; ++i)
 		if (levels[level].texdata[i].block_id == id)
@@ -70,10 +76,30 @@ void CLAddTextureLevel(const char **tokens, unsigned int count) {
 	}
 }
 
+void CLAddTextureBind(const char **tokens, unsigned int count) {
+	if (count < 2) return;
+
+	for (unsigned int i = 0; i < texbind_count; ++i)
+		if (texbinds[i].block_id == tokens[0][0]) {
+			texbinds[i].index = atoi(tokens[1]);
+			return;
+		}
+
+	int last = texbind_count;
+	++texbind_count;
+	texbinds = (TextureBinding*)realloc(texbinds, sizeof(TextureBinding) * texbind_count);
+
+	texbinds[last].block_id = tokens[0][0];
+	texbinds[last].index = atoi(tokens[1]);
+}
+
 void ClearTextureLevels() {
+	free(texbinds);
 	free(levels);
+	texbinds = NULL;
 	levels = NULL;
 	level_count = 0;
+	texbind_count = 0;
 }
 
 

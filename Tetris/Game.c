@@ -9,6 +9,7 @@
 #include "Lobby.h"
 #include "Menu.h"
 #include "Messaging.h"
+#include "RNG.h"
 #include "Resource.h"
 #include "Server.h"
 #include "Shader.h"
@@ -49,10 +50,16 @@ void DBGNextLevel() {
 	if (board_count) {
 		byte message[4] = { SVMSG_LEVEL, 0 };
 		Int16ToBuffer(boards[0].level + 1, message + 2);
-		ServerBroadcast(message, 4, true);
+		ServerBroadcast(message, 4, 0);
 
 		ExecLevelBind(boards[0].level, 0);
 	};
+}
+
+void DBGAddGarbo(const char **tokens, unsigned int count) {
+	if (count < 2 || board_count == 0) return;
+
+	BoardAddGarbage(boards + 0, atoi(tokens[0]), atoi(tokens[1]));
 }
 
 void GameInit() {
@@ -80,6 +87,7 @@ void GameInit() {
 	AddDCall("rotate_ccw", GameInputCCW, false);
 
 	AddDCall("dbg_next_level", DBGNextLevel, false);
+	AddDFunction("dbg_add_garbage", DBGAddGarbo, false);
 
 	cl_gap = &AddDFloatC("cl_gap", 0.f, C_CLGap, false)->value.number;
 }
@@ -133,43 +141,71 @@ inline int GameBoardGetScore(int id, int clears) {
 	score *= boards[id].level + 1;
 
 	if (scoring_drop_start_y)
-		return score + (scoring_drop_start_y - boards[0].block.y);
+		return score + (scoring_drop_start_y - boards[id].block.y);
 
 	return score;
 }
 
+inline int GameBoardGetGarbageHeight(int clears) {
+	switch (clears) {
+	case 2:
+		return 1;
+	case 3:
+		return 2;
+	case 4:
+		return 4;
+	}
+
+	return 0;
+}
+
 inline void GameBoardSubmitBlock(int id) {
 	int clears = BoardSubmitBlock(boards + id);
-	int score = GameBoardGetScore(id, clears);
+	BoardSubmitGarbageQueue(boards + id);
 
 	byte message[6] = { SVMSG_SCORE };
 
-	if (score && id == 0) {
+	if (id == 0) {
+		int score = GameBoardGetScore(id, clears);
 		Int32ToBuffer(boards[id].score + score, message + 1);
 		MessageServer(message, 5);
 	}
 
-	if (!IsRemoteClient() && clears) {
-		message[1] = (byte)id;
+	if (!IsRemoteClient()) {
+		if (clears) {
+			message[1] = (byte)id;
 
-		boards[id].line_clears += clears;
-		message[0] = SVMSG_LINESCORE;
-		Int32ToBuffer(boards[id].line_clears, message + 2);
-		ServerBroadcast(message, 6, false);
+			boards[id].line_clears += clears;
+			message[0] = SVMSG_LINESCORE;
+			Int32ToBuffer(boards[id].line_clears, message + 2);
+			ServerBroadcast(message, 6, 0);
 
-		boards[id].level_clears += clears;
+			boards[id].level_clears += clears;
 
-		while (boards[id].level_clears >= (uint16)*sv_clears_per_level) {
-			++boards[id].level;
-			boards[id].level_clears -= (uint16)*sv_clears_per_level;
-			message[0] = SVMSG_LEVEL; //Indicates we should send level message
-		}
+			while (boards[id].level_clears >= (uint16)*sv_clears_per_level) {
+				++boards[id].level;
+				boards[id].level_clears -= (uint16)*sv_clears_per_level;
+				message[0] = SVMSG_LEVEL; //Indicates we should send level message
+			}
 
-		if (message[0] == SVMSG_LEVEL) {
-			Int16ToBuffer(boards[id].level, message + 2);
-			ServerBroadcast(message, 4, false);
+			if (message[0] == SVMSG_LEVEL) {
+				Int16ToBuffer(boards[id].level, message + 2);
+				ServerBroadcast(message, 4, 0);
 
-			ExecLevelBind(boards[id].level, id);
+				ExecLevelBind(boards[id].level, 0);
+			}
+
+			message[0] = SVMSG_GARBAGE;
+
+			for (byte i = 0; i < board_count; ++i) {
+				if (i != id) {
+					message[1] = i;
+					message[2] = GameBoardGetGarbageHeight(clears);			//Rows
+					message[3] = RandomIntInRange(0, boards[0].columns);	//Clear
+
+					ServerBroadcast(message, 4, ~0);
+				}
+			}
 		}
 	}
 }
@@ -194,7 +230,7 @@ inline void GamePlaceBlock() {
 
 void MoveDown() {
 	if (BoardInputDown(boards + 0))
-		SendBlockPosMessage(0);
+		SendBlockPosMessage();
 	else
 		GamePlaceBlock();
 }
@@ -340,7 +376,7 @@ void GameBegin(int playercount) {
 		GameEnd();
 
 	board_count = playercount;
-	boards = (Board*)malloc(board_count * sizeof(Board));
+	boards = (Board*)calloc(board_count, sizeof(Board));
 
 	byte rows = (byte)*sv_board_real_height;
 	byte columns = (byte)*sv_board_width;
@@ -365,10 +401,10 @@ void GameBegin(int playercount) {
 	GameSizeUpdate(0, 0);
 
 	if (IsRemoteClient()) {
+		SendQueueMessage();
+
 		byte message = SVMSG_REQUEST;
 		MessageServer(&message, 1);
-
-		SendQueueMessage();
 	}
 	else
 		GameBoardSetName(0, LobbyGetClientName(0)); //We do this because otherwise listen servers wouldn't have their name on their board as the name message is sent prior to this point
@@ -524,14 +560,14 @@ void GameBoardSetLineClears(int id, uint16 line_clears) {
 }
 
 void GameBoardSetBlockPos(int id, signed short x, signed short y) {
-	if (id == 0 || board_count == 0) return;
+	if (board_count == 0) return;
 
 	boards[id].block.x = x;
 	boards[id].block.y = y;
 }
 
 void GameBoardSetBlockData(int id, int size, const byte *data) {
-	if (id == 0 || board_count == 0) return;
+	if (board_count == 0) return;
 
 	int sizesq = size * size;
 
@@ -544,7 +580,7 @@ void GameBoardSetBlockData(int id, int size, const byte *data) {
 }
 
 void GameBoardSetQueue(int id, byte length, const byte *queue) {
-	if (id == 0 || board_count == 0) return;
+	if (board_count == 0) return;
 
 	boards[id].visible_queue_length = length;
 
@@ -557,13 +593,13 @@ void GameBoardSetQueue(int id, byte length, const byte *queue) {
 }
 
 void GameBoardPlaceBlock(int id) {
-	if (id == 0 || board_count == 0) return;
+	if (board_count == 0) return;
 
 	GameBoardSubmitBlock(id);
 }
 
 void GameBoardClear(int id) {
-	if (id == 0 || board_count == 0) return;
+	if (board_count == 0) return;
 	if (id < 0) id = 0;
 
 	BoardClear(boards + id);
@@ -583,8 +619,17 @@ void GameBoardClear(int id) {
 	else
 		boards[id].visible_queue_length = 0;
 
+	for (int i = 0; i < GARBAGE_QUEUE_SIZE; ++i)
+		boards[id].garbage_queue[i].rows = 0;
+
 	if (!IsRemoteClient())
 		ExecLevelBind(0, id);
+}
+
+void GameBoardAddGarbage(int id, byte rows, byte clear_column) {
+	if (board_count == 0) return;
+
+	BoardAddGarbage(boards + id, rows, clear_column);
 }
 
 void GameSendAllBoardData(int playerid) {
@@ -596,26 +641,28 @@ void GameSendAllBoardData(int playerid) {
 	byte *message = (byte*)malloc(message_length);
 
 	for (unsigned int i = 0; i < board_count; ++i) {
-		message[1] = (byte)i;
+		if (i != playerid) {
+			message[1] = (byte)i;
 
-		message[0] = SVMSG_BOARD;
-		memcpy_s(message + 2, board_data_length, &boards[i].data[0][0], board_data_length);
-		ServerSend(playerid, message, board_data_length + 2);
+			message[0] = SVMSG_BOARD;
+			memcpy_s(message + 2, board_data_length, &boards[i].data[0][0], board_data_length);
+			ServerSend(playerid, message, board_data_length + 2);
 
-		message[0] = SVMSG_BLOCKPOS;
-		Int16ToBuffer(boards[i].block.x, message + 2);
-		Int16ToBuffer(boards[i].block.y, message + 4);
-		ServerSend(playerid, message, 6);
+			message[0] = SVMSG_BLOCKPOS;
+			Int16ToBuffer(boards[i].block.x, message + 2);
+			Int16ToBuffer(boards[i].block.y, message + 4);
+			ServerSend(playerid, message, 6);
 
-		message[0] = SVMSG_BLOCKDATA;
-		message[2] = boards[i].block.size;
-		memcpy_s(message + 3, message_length - 3, boards[i].block.data, SQUARE(boards[i].block.size));
-		ServerSend(playerid, message, SQUARE(boards[i].block.size) + 3);
+			message[0] = SVMSG_BLOCKDATA;
+			message[2] = boards[i].block.size;
+			memcpy_s(message + 3, message_length - 3, boards[i].block.data, SQUARE(boards[i].block.size));
+			ServerSend(playerid, message, SQUARE(boards[i].block.size) + 3);
 
-		message[0] = SVMSG_QUEUE;
-		message[2] = (byte)boards[i].visible_queue_length;
-		memcpy_s(message + 3, message_length - 3, boards[i].next_queue, boards[i].visible_queue_length);
-		ServerSend(playerid, message, boards[i].visible_queue_length + 3);
+			message[0] = SVMSG_QUEUE;
+			message[2] = (byte)boards[i].visible_queue_length;
+			memcpy_s(message + 3, message_length - 3, boards[i].next_queue, boards[i].visible_queue_length);
+			ServerSend(playerid, message, boards[i].visible_queue_length + 3);
+		}
 	}
 }
 

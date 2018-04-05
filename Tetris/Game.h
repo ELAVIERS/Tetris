@@ -26,6 +26,7 @@ void GameBoardSetBlockPos(int id, signed short x, signed short y);
 void GameBoardSetQueue(int id, byte length, const byte *queue);
 void GameBoardPlaceBlock(int id);
 void GameBoardClear(int id);
+void GameBoardAddGarbage(int id, byte rows, byte clear_column);
 
 void GameSendAllBoardData(int playerid);
 void GameReceiveBoardData(int id, const byte *data, uint16 length);

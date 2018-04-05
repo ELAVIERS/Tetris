@@ -1,6 +1,8 @@
 #pragma once
 #include "Types.h"
 
+int RandomIntInRange(int min, int max);
+
 /*
 	GenerateBag
 

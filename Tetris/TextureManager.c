@@ -9,7 +9,7 @@ inline int GetTexID(const char *string) {
 #define IF_ID(STRING, ID) if (strcmp(STRING, ID) == 0)
 
 			IF_ID(string, "font") return TEX_FONT;
-else		IF_ID(string, "block") return TEX_BLOCK;
+	else	IF_ID(string, "block") return TEX_BLOCK;
 	else	IF_ID(string, "ul") return TEX_UL;
 	else	IF_ID(string, "u")	return TEX_U;
 	else	IF_ID(string, "ur")	return TEX_UR;
