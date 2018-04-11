@@ -43,6 +43,14 @@ unsigned int BlockTypesGetCount() {
 	return type_count;
 }
 
+int GetIndexOfBlockID(byte block_id) {
+	for (int i = 0; i < type_count; ++i)
+		if (blocktypes[i].id == block_id)
+			return i;
+
+	return -1;
+}
+
 void CreateNewBlock(int index, Block *block, unsigned short top) {
 	current_type = blocktypes + index;
 
@@ -58,7 +66,7 @@ void CreateNewBlock(int index, Block *block, unsigned short top) {
 	block->x = current_type->start_column;
 }
 
-void RenderBlockByID(int index, Mat3 transform, const Quad *quad, unsigned int level) {
+void RenderBlockByIndex(int index, Mat3 transform, const Quad *quad, unsigned int level) {
 	RenderTileBuffer(blocktypes[index].data, blocktypes[index].size, blocktypes[index].size, transform, quad, level);
 }
 

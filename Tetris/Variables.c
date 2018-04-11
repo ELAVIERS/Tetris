@@ -94,8 +94,6 @@ void DBGCreateBag() {
 #include "InputManager.h"
 #include "Lobby.h"
 
-#define ValueAsFloatPtr(DVAR) &DVAR->value.number
-
 void CreateVariables() {
 	AddCvar(AddDStringC("cfg_texture", "", C_RunAsConfig, false));
 
@@ -153,9 +151,10 @@ void CreateVariables() {
 
 	sv_ghost =					ValueAsFloatPtr(AddDFloat("sv_ghost", 1.f, true));
 	sv_hard_drop =				ValueAsFloatPtr(AddDFloat("sv_hard_drop", 1.f, true));
+	sv_hold =					ValueAsFloatPtr(AddDFloat("sv_hold", 1.f, true));
 
-	axis_x =					ValueAsFloatPtr(AddDFloat("axis_x", 0, false));
-	axis_down =					ValueAsFloatPtr(AddDFloat("axis_down", 0, false));
+	sv_lock_delay =				ValueAsFloatPtr(AddDFloat("sv_lock_delay", .5f, true));
+	sv_drop_delay =				ValueAsFloatPtr(AddDFloat("sv_drop_delay", .1f, true));
 
 	AddDCall("dbg_create_bag", DBGCreateBag, false);
 }

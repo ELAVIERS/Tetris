@@ -52,16 +52,20 @@ typedef struct Board_s {
 	byte visible_queue_length;
 	byte bag_size;
 	byte bag_element_count;
+
+	byte held_index;
 } Board;
 
 void BoardCreate(Board*);
 void BoardFree(Board*);
 void BoardClear(Board*);
+bool BoardCheckMove(const Board*, short x, short y);
 void BoardSetIDSize(Board*, float id_size);
 void BoardReallocNextQueue(Board*, byte visible_elements, byte bag_element_count);
 void BoardRefillQueueSlots(Board *board);
 byte BoardSubmitGarbageQueue(Board *board);
 void BoardAddGarbage(Board *board, byte rows, byte clear_column);
+void BoardUpdateGhostY(Board *board);
 
 //Returns the amount of lines cleared
 int BoardSubmitBlock(Board*);

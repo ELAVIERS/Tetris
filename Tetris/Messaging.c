@@ -24,7 +24,7 @@ void MessageServer(const byte *message, uint16 length) {
 }
 
 void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
-	static char buffer[MSG_LEN];
+	char buffer[256];
 
 	buffer[0] = message[0];
 
@@ -42,14 +42,18 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 	case SVMSG_CHAT:
 		buffer[1] = playerid;
 		strcpy_s(buffer + 2, MSG_LEN - 3, message + 1);
-		ServerBroadcast(buffer, (uint16)strlen(buffer + 2) + 3, ~0);
+		ServerBroadcast(buffer, (uint16)strlen(buffer + 2) + 3, -1);
 		break;
 
 	case SVMSG_JOIN:
 	case SVMSG_PLACE:
-	case SVMSG_CLEAR:
 		buffer[1] = playerid;
 		ServerBroadcast(buffer, 2, playerid);
+		break;
+
+	case SVMSG_CLEAR:
+		buffer[1] = playerid;
+		ServerBroadcast(buffer, 2, -1);
 		break;
 
 	case SVMSG_LEAVE:
@@ -57,13 +61,21 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 		break;
 
 	case SVMSG_BLOCKPOS:
-	case SVMSG_SCORE:
 		buffer[1] = playerid;
 		buffer[2] = message[1];
 		buffer[3] = message[2];
 		buffer[4] = message[3];
 		buffer[5] = message[4];
 		ServerBroadcast(buffer, 6, playerid);
+		break;
+
+	case SVMSG_SCORE:
+		buffer[1] = playerid;
+		buffer[2] = message[1];
+		buffer[3] = message[2];
+		buffer[4] = message[3];
+		buffer[5] = message[4];
+		ServerBroadcast(buffer, 6, -1);
 		break;
 
 	case SVMSG_BLOCKDATA:
@@ -78,6 +90,12 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 		buffer[2] = message[1];
 		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2]);
 		ServerBroadcast(buffer, 3 + buffer[2], playerid);
+		break;
+
+	case SVMSG_HOLD:
+		buffer[1] = playerid;
+		buffer[2] = message[1];
+		ServerBroadcast(buffer, 3, playerid);
 		break;
 
 	case SVMSG_REQUEST:
@@ -124,11 +142,11 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		GameBoardSetLevel(ClientIDToBoardID(message[1]), BufferToInt16(message + 2));
 		break;
 	case SVMSG_SCORE:
-		LobbySetClientScore(message[1], BufferToInt32(message + 2));
-		GameBoardSetScore(ClientIDToBoardID(message[1]), BufferToInt32(message + 2));
+		LobbyAddClientScore(message[1], BufferToInt32(message + 2));
+		GameBoardAddClientScore(ClientIDToBoardID(message[1]), BufferToInt32(message + 2));
 		break;
 	case SVMSG_LINESCORE:
-		LobbySetClientLineScore(message[1], BufferToInt32(message + 2));
+		LobbySetClientLineScore(message[1], BufferToInt16(message + 2));
 		GameBoardSetLineClears(ClientIDToBoardID(message[1]), BufferToInt16(message + 2));
 		break;
 	case SVMSG_TEXT:
@@ -182,6 +200,10 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 
 	case SVMSG_GARBAGE:
 		GameBoardAddGarbage(ClientIDToBoardID(message[1]), message[2], message[3]);
+		break;
+
+	case SVMSG_HOLD:
+		GameBoardSetHeldBlock(ClientIDToBoardID(message[1]), message[2]);
 		break;
 
 	case SVMSG_START:

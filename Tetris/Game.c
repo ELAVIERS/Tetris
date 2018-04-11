@@ -32,10 +32,17 @@ unsigned int board_count = 0;
 GLuint shader, textshader;
 
 float *cl_gap;
+float *axis_x, *axis_down;
+DvarCallback C_AxisDown;
 
-void GameInputDrop(), GameInputCCW(), GameInputCW(), C_CLBlockIDSize(DvarValue);
+void GameInputDrop(), GameInputCCW(), GameInputCW(), GameInputHold(), C_CLBlockIDSize(DvarValue);
 
 short scoring_drop_start_y;
+float drop_timer, drop_timer_target;
+float next_block_countdown = -1.f;
+
+bool is_locking = false;
+bool can_use_held = false;
 
 void C_CLGap(DvarValue value) {
 	GameSizeUpdate(0, 0);
@@ -82,9 +89,13 @@ void GameInit() {
 	shader = CreateShaderProgram(frag_src, vert_src);
 	textshader = CreateShaderProgram(text_frag_src, vert_src);
 
+	axis_x = ValueAsFloatPtr(AddDFloat("axis_x", 0, false));
+	axis_down = ValueAsFloatPtr(AddDFloatC("axis_down", 0, C_AxisDown, false));
+
 	AddDCall("drop", GameInputDrop, false);
 	AddDCall("rotate_cw", GameInputCW, false);
 	AddDCall("rotate_ccw", GameInputCCW, false);
+	AddDCall("hold", GameInputHold, false);
 
 	AddDCall("dbg_next_level", DBGNextLevel, false);
 	AddDFunction("dbg_add_garbage", DBGAddGarbo, false);
@@ -93,7 +104,7 @@ void GameInit() {
 }
 
 void SendPosMessage(int16 x, int16 y) {
-	static byte posmsg[] = { SVMSG_BLOCKPOS, 0, 0, 0, 0 };
+	byte posmsg[] = { SVMSG_BLOCKPOS, 0, 0, 0, 0 };
 	Int16ToBuffer(x, posmsg + 1);
 	Int16ToBuffer(y, posmsg + 3);
 	MessageServer(posmsg, sizeof(posmsg));
@@ -104,7 +115,7 @@ inline void SendBlockPosMessage() {
 }
 
 void SendBlockDataMessage() {
-	static byte datamsg[256] = { SVMSG_BLOCKDATA };
+	byte datamsg[256] = { SVMSG_BLOCKDATA };
 	datamsg[1] = boards[0].block.size;
 
 	int sizesq = SQUARE(boards[0].block.size);
@@ -166,8 +177,7 @@ inline void GameBoardSubmitBlock(int id) {
 	byte message[6] = { SVMSG_SCORE };
 
 	if (id == 0) {
-		int score = GameBoardGetScore(id, clears);
-		Int32ToBuffer(boards[id].score + score, message + 1);
+		Int32ToBuffer(GameBoardGetScore(id, clears), message + 1);
 		MessageServer(message, 5);
 	}
 
@@ -175,10 +185,9 @@ inline void GameBoardSubmitBlock(int id) {
 		if (clears) {
 			message[1] = (byte)id;
 
-			boards[id].line_clears += clears;
 			message[0] = SVMSG_LINESCORE;
-			Int32ToBuffer(boards[id].line_clears, message + 2);
-			ServerBroadcast(message, 6, 0);
+			Int32ToBuffer(boards[id].line_clears + clears, message + 2);
+			ServerBroadcast(message, 6, -1);
 
 			boards[id].level_clears += clears;
 
@@ -190,7 +199,7 @@ inline void GameBoardSubmitBlock(int id) {
 
 			if (message[0] == SVMSG_LEVEL) {
 				Int16ToBuffer(boards[id].level, message + 2);
-				ServerBroadcast(message, 4, 0);
+				ServerBroadcast(message, 4, -1);
 
 				ExecLevelBind(boards[id].level, 0);
 			}
@@ -203,22 +212,54 @@ inline void GameBoardSubmitBlock(int id) {
 					message[2] = GameBoardGetGarbageHeight(clears);			//Rows
 					message[3] = RandomIntInRange(0, boards[0].columns);	//Clear
 
-					ServerBroadcast(message, 4, ~0);
+					ServerBroadcast(message, 4, -1);
 				}
 			}
 		}
 	}
 }
 
-inline void GamePlaceBlock() {
+void CheckLocking() {
+	if (!BoardCheckMove(boards + 0, 0, -1) && *sv_lock_delay >= 0.f) {
+		drop_timer_target = *sv_lock_delay;
+		is_locking = true;
+	}
+	else {
+		if (is_locking) {
+			drop_timer = 0;
+
+			is_locking = false;
+		}
+
+		drop_timer_target = *axis_down ? (*sv_drop_gravity_is_factor ? *sv_gravity * *sv_drop_gravity : *sv_drop_gravity) : *sv_gravity;
+	}
+}
+
+inline void GameUseNextBlock() {
+	BoardUseNextBlock(boards + 0);
+	SendBlockPosMessage();
+	SendBlockDataMessage();
+
+	CheckLocking();
+	can_use_held = true;
+	drop_timer = 0;
+}
+
+void GamePlaceBlock() {
+	if (boards[0].block.size == 0) return;
+
 	CurrentBlockIncrementCount();
 	GameBoardSubmitBlock(0);
-	BoardUseNextBlock(boards + 0);
+
+	boards[0].block.size = 0;
+	free(boards[0].block.data);
+	boards[0].block.data = NULL;
+	next_block_countdown = *sv_drop_delay;
 
 	byte message = SVMSG_PLACE;
 	MessageServer(&message, 1);
-	SendBlockDataMessage(0);
-	SendBlockPosMessage(0);
+	SendBlockPosMessage();
+	SendBlockDataMessage();
 
 	SendQueueMessage();
 
@@ -229,15 +270,40 @@ inline void GamePlaceBlock() {
 }
 
 void MoveDown() {
-	if (BoardInputDown(boards + 0))
+	if (BoardInputDown(boards + 0)) {
 		SendBlockPosMessage();
+
+		CheckLocking();
+	}
 	else
 		GamePlaceBlock();
 }
 
 void Moveside(int dir) {
-	if (BoardInputX(boards + 0, (int)*axis_x))
-		SendBlockPosMessage(0);
+	if (BoardInputX(boards + 0, (int)*axis_x)) {
+		SendBlockPosMessage();
+	
+		CheckLocking();
+	}
+}
+
+void C_AxisDown(DvarValue value) {
+	if (board_count == 0) return;
+
+	if (value.number) {
+		scoring_drop_start_y = boards[0].block.y;
+		MoveDown();
+
+		if (!is_locking) {
+			drop_timer_target = *sv_drop_gravity_is_factor ? *sv_gravity * *sv_drop_gravity : *sv_drop_gravity;
+			drop_timer = 0;
+		}
+	}
+	else if (!is_locking) {
+		scoring_drop_start_y = 0;
+
+		drop_timer_target = *sv_gravity;
+	}
 }
 
 void GameFrame() {
@@ -246,33 +312,13 @@ void GameFrame() {
 	ServerFrame();
 	ClientFrame();
 
-	static float axis_x_prev = 0.f, axis_down_prev = 0.f;
-	static float drop_timer = 0.f;
+	static float axis_x_prev = 0.f;
 	static float das_timer = 0.f;
 
 	if (board_count && !g_paused) {
 		drop_timer += g_delta;
 
-		if (*axis_down != axis_down_prev) {
-			axis_down_prev = *axis_down;
-
-			drop_timer = 0;
-
-			if (*axis_down) {
-				scoring_drop_start_y = boards[0].block.y;
-				MoveDown();
-			}
-			else
-				scoring_drop_start_y = 0;
-		}
-
-		if (*axis_down) {
-			if (drop_timer >= (*sv_drop_gravity_is_factor ? *sv_gravity : 1.f) * *sv_drop_gravity) {
-				drop_timer = 0.f;
-				MoveDown();
-			}
-		}
-		else if (drop_timer >= *sv_gravity) {
+		if (drop_timer >= drop_timer_target) {
 			drop_timer = 0.f;
 			MoveDown();
 		}
@@ -291,6 +337,12 @@ void GameFrame() {
 				das_timer -= *sv_autorepeat;
 				Moveside((int)axis_x_prev);
 			}
+		}
+
+		if (next_block_countdown >= 0.f) {
+			next_block_countdown -= g_delta;
+			if (next_block_countdown <= 0.f)
+				GameUseNextBlock();
 		}
 	}
 
@@ -386,6 +438,7 @@ void GameBegin(int playercount) {
 		boards[i].rows = rows;
 		boards[i].columns = columns;
 		boards[i].visible_rows = render_rows;
+		boards[i].held_index = 0xFF;
 
 		BoardCreate(boards + i);
 		BoardClear(boards + i);
@@ -393,10 +446,7 @@ void GameBegin(int playercount) {
 	}
 	boards[0].bag_size = (byte)*sv_bag_size;
 	BoardReallocNextQueue(boards + 0, (byte)*sv_queue_size, (byte)BlockTypesGetCount());
-	BoardUseNextBlock(boards + 0);
-
-	SendBlockDataMessage();
-	SendBlockPosMessage();
+	GameUseNextBlock();
 
 	GameSizeUpdate(0, 0);
 
@@ -412,8 +462,6 @@ void GameBegin(int playercount) {
 
 void GameRestart() {
 	ClearBlockCounts();
-	GameBoardClear(-1);
-	BoardUseNextBlock(boards + 0);
 
 	byte clear_message = SVMSG_CLEAR;
 	MessageServer(&clear_message, 1);
@@ -530,6 +578,32 @@ void GameInputCCW() {
 		SendBlockDataMessage();
 }
 
+void GameInputHold() {
+	if (board_count && !g_paused && *sv_hold && can_use_held) {
+		if (boards[0].held_index == 0xFF) {
+			boards[0].held_index = GetIndexOfBlockID(boards[0].block.id);
+			GameUseNextBlock();
+		}
+		else {
+			byte held_index_old = boards[0].held_index;
+			boards[0].held_index = GetIndexOfBlockID(boards[0].block.id);
+			
+			free(boards[0].block.data);
+			CreateNewBlock(held_index_old, &boards[0].block, boards[0].visible_rows - 1);
+
+			BoardUpdateGhostY(boards + 0);
+
+			SendBlockPosMessage();
+			SendBlockDataMessage();
+		}
+
+		byte message[] = { SVMSG_HOLD, boards[0].held_index };
+		MessageServer(message, sizeof(message));
+
+		can_use_held = false;
+	}
+}
+
 
 //Net
 
@@ -547,10 +621,10 @@ void GameBoardSetLevel(int id, uint16 level) {
 	boards[id].level = level;
 }
 
-void GameBoardSetScore(int id, uint32 score) {
+void GameBoardAddClientScore(int id, uint32 score) {
 	if (board_count == 0) return;
 
-	boards[id].score = score;
+	boards[id].score += score;
 }
 
 void GameBoardSetLineClears(int id, uint16 line_clears) {
@@ -562,8 +636,13 @@ void GameBoardSetLineClears(int id, uint16 line_clears) {
 void GameBoardSetBlockPos(int id, signed short x, signed short y) {
 	if (board_count == 0) return;
 
+	bool x_update = boards[id].block.x != x;
+
 	boards[id].block.x = x;
 	boards[id].block.y = y;
+
+	if (x_update)
+		BoardUpdateGhostY(boards + id);
 }
 
 void GameBoardSetBlockData(int id, int size, const byte *data) {
@@ -577,6 +656,8 @@ void GameBoardSetBlockData(int id, int size, const byte *data) {
 	}
 
 	memcpy_s(boards[id].block.data, sizesq, data, sizesq);
+
+	BoardUpdateGhostY(boards + id);
 }
 
 void GameBoardSetQueue(int id, byte length, const byte *queue) {
@@ -592,6 +673,12 @@ void GameBoardSetQueue(int id, byte length, const byte *queue) {
 	memcpy_s(boards[id].next_queue, length, queue, length);
 }
 
+void GameBoardSetHeldBlock(int id, byte blockid) {
+	if (board_count == 0) return;
+
+	boards[id].held_index = blockid;
+}
+
 void GameBoardPlaceBlock(int id) {
 	if (board_count == 0) return;
 
@@ -600,8 +687,6 @@ void GameBoardPlaceBlock(int id) {
 
 void GameBoardClear(int id) {
 	if (board_count == 0) return;
-	if (id < 0) id = 0;
-
 	BoardClear(boards + id);
 
 	boards[id].block.size = 0;
@@ -611,10 +696,13 @@ void GameBoardClear(int id) {
 	boards[id].line_clears = 0;
 	boards[id].level_clears = 0;
 	boards[id].level = 0;
+	boards[id].held_index = 0xFF;
 
 	if (id == 0) {
 		boards[0].next_queue[0] = 0xFF;
 		BoardRefillQueueSlots(boards + 0);
+
+		GameUseNextBlock();
 	}
 	else
 		boards[id].visible_queue_length = 0;
@@ -648,15 +736,15 @@ void GameSendAllBoardData(int playerid) {
 			memcpy_s(message + 2, board_data_length, &boards[i].data[0][0], board_data_length);
 			ServerSend(playerid, message, board_data_length + 2);
 
-			message[0] = SVMSG_BLOCKPOS;
-			Int16ToBuffer(boards[i].block.x, message + 2);
-			Int16ToBuffer(boards[i].block.y, message + 4);
-			ServerSend(playerid, message, 6);
-
 			message[0] = SVMSG_BLOCKDATA;
 			message[2] = boards[i].block.size;
 			memcpy_s(message + 3, message_length - 3, boards[i].block.data, SQUARE(boards[i].block.size));
 			ServerSend(playerid, message, SQUARE(boards[i].block.size) + 3);
+
+			message[0] = SVMSG_BLOCKPOS;
+			Int16ToBuffer(boards[i].block.x, message + 2);
+			Int16ToBuffer(boards[i].block.y, message + 4);
+			ServerSend(playerid, message, 6);
 
 			message[0] = SVMSG_QUEUE;
 			message[2] = (byte)boards[i].visible_queue_length;

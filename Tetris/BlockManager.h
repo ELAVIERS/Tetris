@@ -5,14 +5,17 @@
 #include "Quad.h"
 
 /*
-CurrentBlockGetRandom
-Retrieves a random block
+CreateNewBlock
+Sets contents of block to the given indexe's blockdata
 
+index				the index of the block data in the array
 block(out)			the block to become random
 top					which row to place the top row of the block at
 */
 void CreateNewBlock(int index, Block *block, unsigned short top);
-void RenderBlockByID(int index, Mat3 transform, const Quad *quad, unsigned int level);
+void RenderBlockByIndex(int index, Mat3 transform, const Quad *quad, unsigned int level);
+
+int GetIndexOfBlockID(byte block_id);
 
 void CurrentBlockIncrementCount();
 

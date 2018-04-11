@@ -150,6 +150,15 @@ typedef enum MessageID_e {
 			3:CLEAR COLUMN (BYTE)
 	*/
 
+	SVMSG_HOLD,
+	/*
+		SERVER
+			1:HELD ID (BYTE)
+		CLIENT
+			1:PLAYER ID (BYTE)
+			2:HELD ID (BYTE)
+	*/
+
 	SVMSG_START,
 
 	SVMSG_BOARD,

@@ -122,7 +122,7 @@ void play_startgame() {
 	Menu_Free(menuslot2);
 
 	byte message = SVMSG_START;
-	ServerBroadcast(&message, 1, ~0);
+	ServerBroadcast(&message, 1, -1);
 }
 
 void CreateMenuSecondary_Play() {

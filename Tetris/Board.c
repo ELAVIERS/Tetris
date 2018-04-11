@@ -57,6 +57,8 @@ bool BoardCheckMove(const Board *board, short x, short y) {
 
 
 void BoardUpdateGhostY(Board *board) {
+	if (board->block.size == 0) return;
+
 	int i;
 	for (i = 0; BoardCheckMove(board, 0, i - 1); --i);
 
@@ -200,7 +202,7 @@ void BoardRender(const Board *board, bool draw_ghost) {
 	float y = board->y + (g_drawborder ? block_h : 0.f);
 	float h = block_h * (board->visible_rows - (g_drawborder ? 0 : 2));
 
-	float nextblock_size = h / (float)(CELL_SIZE * board->visible_queue_length);
+	float nextblock_size = (h - block_w * (CELL_SIZE + 2)) / (float)(CELL_SIZE * board->visible_queue_length);
 	if (nextblock_size > block_w)
 		nextblock_size = block_w;
 
@@ -224,7 +226,10 @@ void BoardRender(const Board *board, bool draw_ghost) {
 		RenderPanel(board->x + board->width, board->y + board->height, block_w * (CELL_SIZE + 2), block_h * 3, block_w, block_h);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
-		RenderPanel((float)(board->x + board->width), (float)board->y, block_w * (CELL_SIZE + 2), board->height, block_w, block_h);
+		RenderPanel(board->x + board->width, board->y + board->height - block_h * (CELL_SIZE + 2), block_w * (CELL_SIZE + 2), block_h * (CELL_SIZE + 2), block_w, block_h);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		RenderPanel(board->x + board->width, board->y, block_w * (CELL_SIZE + 2), board->height - block_h * (CELL_SIZE + 2), block_w, block_h);
 	}
 	else {
 		RenderRect(x, y, block_w * board->columns, block_h * board->visible_rows);
@@ -255,16 +260,22 @@ void BoardRender(const Board *board, bool draw_ghost) {
 	transform[2][1] = y + board->block.y * block_h;
 	RenderTileBuffer(board->block.data, renderheight, board->block.size, transform, g_quads + QUAD_BLOCK, board->level);
 
+	if (board->held_index != 0xFF) {
+		transform[2][0] = board->x + board->width + block_w;
+		transform[2][1] = board->y + board->height - block_h * (CELL_SIZE + 1);
+		RenderBlockByIndex(board->held_index, transform, g_quads + QUAD_BLOCK, board->level);
+	}
+
 	if (board->visible_queue_length) {
 		Mat3Identity(transform);
 		Mat3Scale(transform, nextblock_size, nextblock_size);
 
 		transform[2][0] = board->x + board->width + block_w;
-		transform[2][1] = board->y + board->height - block_h - (nextblock_size * CELL_SIZE);
+		transform[2][1] = board->y + block_h;
 
-		for (uint16 i = 0; i < board->visible_queue_length; ++i) {
-			RenderBlockByID(board->next_queue[i], transform, g_quads + QUAD_BLOCK, board->level);
-			Mat3Translate(transform, 0, -nextblock_size * CELL_SIZE);
+		for (int16 i = board->visible_queue_length - 1; i >= 0; --i) {
+			RenderBlockByIndex(board->next_queue[i], transform, g_quads + QUAD_BLOCK, board->level);
+			Mat3Translate(transform, 0, nextblock_size * CELL_SIZE);
 		}
 	}
 }
@@ -330,6 +341,8 @@ void BoardRenderText(const Board *board) {
 //Input
 
 bool BoardInputDown(Board *board) {
+	if (board->block.size == 0) return;
+
 	if (BoardCheckMove(board, 0, -1)) {
 		--board->block.y;
 		return true;

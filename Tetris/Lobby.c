@@ -109,6 +109,10 @@ void LobbySetClientScore(byte id, uint32 score) {
 	}
 }
 
+void LobbyAddClientScore(byte id, uint32 score) {
+	LobbySetClientScore(id, clients[id].score + score);
+}
+
 void LobbySetClientLineScore(byte id, uint32 line_clears) {
 	clients[id].line_score = line_clears;
 

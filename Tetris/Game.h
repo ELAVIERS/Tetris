@@ -19,11 +19,12 @@ void GameSetBagSize(byte bag_size);
 //Net
 void GameBoardSetName(int id, const char *name);
 void GameBoardSetLevel(int id, uint16 level);
-void GameBoardSetScore(int id, uint32 score);
+void GameBoardAddClientScore(int id, uint32 score);
 void GameBoardSetLineClears(int id, uint16 clears);
 void GameBoardSetBlockData(int id, int size, const byte *data);
 void GameBoardSetBlockPos(int id, signed short x, signed short y);
 void GameBoardSetQueue(int id, byte length, const byte *queue);
+void GameBoardSetHeldBlock(int id, byte blockid);
 void GameBoardPlaceBlock(int id);
 void GameBoardClear(int id);
 void GameBoardAddGarbage(int id, byte rows, byte clear_column);
