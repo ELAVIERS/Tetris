@@ -341,7 +341,7 @@ void BoardRenderText(const Board *board) {
 //Input
 
 bool BoardInputDown(Board *board) {
-	if (board->block.size == 0) return;
+	if (board->block.size == 0) return false;
 
 	if (BoardCheckMove(board, 0, -1)) {
 		--board->block.y;
@@ -352,6 +352,8 @@ bool BoardInputDown(Board *board) {
 }
 
 bool BoardInputX(Board *board, int x) {
+	if (x == 0) return false;
+
 	if (BoardCheckMove(board, x, 0)) {
 		board->block.x += x;
 		BoardUpdateGhostY(board);

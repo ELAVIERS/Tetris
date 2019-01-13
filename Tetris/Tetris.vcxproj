@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{D89707F5-AA7E-4066-A3DB-D824AC0B4473}</ProjectGuid>
     <RootNamespace>Tetris</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -101,10 +101,11 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+      <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
+xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
 xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
 xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
 xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
@@ -118,10 +119,11 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
       <PreprocessorDefinitions>GLEW_STATIC;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+      <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
+xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
 xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
 xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
 xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
@@ -139,10 +141,11 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+      <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
+xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
 xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
 xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
 xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
@@ -160,10 +163,11 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
+      <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
+xcopy $(ProjectDir)Blocks $(TargetDir)Blocks /E /I /R /Y
 xcopy $(ProjectDir)Modes $(TargetDir)Modes /E /I /R /Y
 xcopy $(ProjectDir)Textures $(TargetDir)Textures /E /I /R /Y
 xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
@@ -192,18 +196,22 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClCompile Include="Networking.c" />
     <ClCompile Include="Quad.c" />
     <ClCompile Include="Rendering.c" />
+    <ClCompile Include="Resample.c" />
     <ClCompile Include="Resource.c" />
     <ClCompile Include="RNG.c" />
     <ClCompile Include="Server.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
+    <ClCompile Include="SoundManager.c" />
     <ClCompile Include="String.c" />
     <ClCompile Include="Text.c" />
     <ClCompile Include="Texture.c" />
     <ClCompile Include="TextureManager.c" />
     <ClCompile Include="Timing.c" />
     <ClCompile Include="Console.c" />
+    <ClCompile Include="UUIDS.c" />
     <ClCompile Include="Variables.c" />
+    <ClCompile Include="WaveFile.c" />
     <ClCompile Include="Window.c" />
   </ItemGroup>
   <ItemGroup>
@@ -228,11 +236,13 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="Networking.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="Rendering.h" />
+    <ClInclude Include="Resample.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RNG.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="Text.h" />
     <ClInclude Include="Texture.h" />
@@ -242,6 +252,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="Types.h" />
     <ClInclude Include="Variables.h" />
     <ClInclude Include="Vertex.h" />
+    <ClInclude Include="WaveFile.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>

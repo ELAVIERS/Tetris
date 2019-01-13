@@ -123,6 +123,18 @@
     <ClCompile Include="LevelManager.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="WaveFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UUIDS.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundManager.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Resample.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h">
@@ -231,6 +243,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LevelManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resample.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -25,3 +25,5 @@ typedef struct Block_s {
 
 void BlockRotateCCW(Block*);
 void BlockRotateCW(Block*);
+
+short BlockGetLargestY(Block*);

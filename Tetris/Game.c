@@ -13,12 +13,18 @@
 #include "Resource.h"
 #include "Server.h"
 #include "Shader.h"
+#include "SoundManager.h"
 #include "Timing.h"
 #include "Variables.h"
 #include <GL/GL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <Windows.h>
+
+const float stat_cells_w = 6;
+const float stat_cells_h = 22;
+
+bool music_fast = false;
 
 float blockid_size;
 
@@ -57,7 +63,7 @@ void DBGNextLevel() {
 	if (board_count) {
 		byte message[4] = { SVMSG_LEVEL, 0 };
 		Int16ToBuffer(boards[0].level + 1, message + 2);
-		ServerBroadcast(message, 4, 0);
+		ServerBroadcast(message, 4, -1);
 
 		ExecLevelBind(boards[0].level, 0);
 	};
@@ -171,12 +177,51 @@ inline int GameBoardGetGarbageHeight(int clears) {
 }
 
 inline void GameBoardSubmitBlock(int id) {
+	int top_row = BlockGetLargestY(&boards[id].block);
+
 	int clears = BoardSubmitBlock(boards + id);
 	BoardSubmitGarbageQueue(boards + id);
+
+	
+	if (clears)
+	{
+		if (clears == 4)
+			SMPlaySound(g_audio.clear4, false);
+		else
+			SMPlaySound(g_audio.clear, false);
+	}
 
 	byte message[6] = { SVMSG_SCORE };
 
 	if (id == 0) {
+		SMPlaySound(g_audio.lock, false);
+		
+		if (top_row >= boards[id].visible_rows - (byte)*cl_fast_music_zone)
+		{
+			if (!music_fast) {
+				music_fast = true;
+				SMStopSound(g_music_id);
+			}
+		}
+		else
+		{
+			if (music_fast) {
+				bool row_is_clear = true;
+
+				for (byte c = 0; c < boards[id].columns; ++c) {
+					if (boards[id].data[boards[id].visible_rows - (byte)*cl_fast_music_zone][c]) {
+						row_is_clear = false;
+						break;
+					}
+				}
+
+				if (row_is_clear) {
+					music_fast = false;
+					SMStopSound(g_music_id);
+				}
+			}
+		}
+
 		Int32ToBuffer(GameBoardGetScore(id, clears), message + 1);
 		MessageServer(message, 5);
 	}
@@ -198,6 +243,8 @@ inline void GameBoardSubmitBlock(int id) {
 			}
 
 			if (message[0] == SVMSG_LEVEL) {
+				SMPlaySound(g_audio.levelup, false);
+
 				Int16ToBuffer(boards[id].level, message + 2);
 				ServerBroadcast(message, 4, -1);
 
@@ -235,14 +282,26 @@ void CheckLocking() {
 	}
 }
 
-inline void GameUseNextBlock() {
+void GameUseNextBlock() {
 	BoardUseNextBlock(boards + 0);
-	SendBlockPosMessage();
-	SendBlockDataMessage();
 
-	CheckLocking();
-	can_use_held = true;
-	drop_timer = 0;
+	if (BoardCheckMove(boards + 0, 0, 0) == false)
+	{
+		g_in_game = false;
+
+		CreateMenu_Pause(false);
+
+		SMClearSounds();
+		SMPlaySound(g_audio.gameover, false);
+	}
+	else {
+		SendBlockPosMessage();
+		SendBlockDataMessage();
+
+		CheckLocking();
+		can_use_held = true;
+		drop_timer = 0;
+	}
 }
 
 void GamePlaceBlock() {
@@ -281,6 +340,8 @@ void MoveDown() {
 
 void Moveside(int dir) {
 	if (BoardInputX(boards + 0, (int)*axis_x)) {
+		SMPlaySound(g_audio.move, false);
+
 		SendBlockPosMessage();
 	
 		CheckLocking();
@@ -290,17 +351,20 @@ void Moveside(int dir) {
 void C_AxisDown(DvarValue value) {
 	if (board_count == 0) return;
 
+	bool move = !g_in_menu && !*sv_paused;
+
 	if (value.number) {
 		scoring_drop_start_y = boards[0].block.y;
-		MoveDown();
+		
+		if (move) MoveDown();
 
 		if (!is_locking) {
 			drop_timer_target = *sv_drop_gravity_is_factor ? *sv_gravity * *sv_drop_gravity : *sv_drop_gravity;
-			drop_timer = 0;
+			if (move) drop_timer = 0;
 		}
 	}
 	else if (!is_locking) {
-		scoring_drop_start_y = 0;
+		if (move) scoring_drop_start_y = 0;
 
 		drop_timer_target = *sv_gravity;
 	}
@@ -312,42 +376,66 @@ void GameFrame() {
 	ServerFrame();
 	ClientFrame();
 
-	static float axis_x_prev = 0.f;
-	static float das_timer = 0.f;
+	if (g_in_game) {
+		static float axis_x_prev = 0.f;
+		static float das_timer = 0.f;
 
-	if (board_count && !g_paused) {
-		drop_timer += g_delta;
+		if (board_count && !*sv_paused) {
+			if (!SMSoundIsPlaying(g_music_id)) {
+				const char *music = NULL;
 
-		if (drop_timer >= drop_timer_target) {
-			drop_timer = 0.f;
-			MoveDown();
-		}
+				switch (RandomIntInRange(0, 3)) {
+				case 0:
+					music = music_fast ? g_audio.mus1f : g_audio.mus1;
+					break;
+				case 1:
+					music = music_fast ? g_audio.mus2f : g_audio.mus2;
+					break;
+				case 2:
+					music = music_fast ? g_audio.mus3f : g_audio.mus3;
+					break;
+				}
 
-		if (*axis_x != axis_x_prev) {
-			axis_x_prev = *axis_x;
-			Moveside((int)*axis_x);
-
-			if (axis_x)
-				das_timer = -*sv_autorepeat_delay;
-		}
-
-		if (axis_x_prev) {
-			das_timer += g_delta;
-			if (das_timer >= *sv_autorepeat) {
-				das_timer -= *sv_autorepeat;
-				Moveside((int)axis_x_prev);
+				g_music_id = SMPlaySound(music, true);
 			}
-		}
 
-		if (next_block_countdown >= 0.f) {
-			next_block_countdown -= g_delta;
-			if (next_block_countdown <= 0.f)
-				GameUseNextBlock();
+			drop_timer += g_delta;
+
+			if (drop_timer >= (g_in_menu ? *sv_gravity : drop_timer_target)) {
+				drop_timer = 0.f;
+				MoveDown();
+			}
+
+			if (!g_in_menu) {
+				if (*axis_x != axis_x_prev) {
+					axis_x_prev = *axis_x;
+					Moveside((int)*axis_x);
+
+					if (axis_x)
+						das_timer = -*sv_autorepeat_delay;
+				}
+
+				if (axis_x_prev) {
+					das_timer += g_delta;
+					if (das_timer >= *sv_autorepeat) {
+						das_timer -= *sv_autorepeat;
+						Moveside((int)axis_x_prev);
+					}
+				}
+			}
+
+			if (next_block_countdown >= 0.f) {
+				next_block_countdown -= g_delta;
+				if (next_block_countdown <= 0.f)
+					GameUseNextBlock();
+			}
 		}
 	}
 
 	//
 
+	SMFeedBuffer(g_delta);
+	
 	GameRender();
 	g_delta = TimerDelta();
 }
@@ -356,8 +444,7 @@ void GameRender() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	Mat3 stats_transform;
-	Mat3Identity(stats_transform);
-	Mat3Scale(stats_transform, 256, 512);
+	float block_w, block_h;
 
 	if (board_count) {
 		UseGLProgram(shader);
@@ -372,8 +459,16 @@ void GameRender() {
 
 		ShaderSetUniformMat3(shader, "u_projection", g_projection);
 
-		if (board_count == 1)
-			RenderBlockPanel(stats_transform, 16, boards[0].level);
+		if (board_count == 1) {
+			block_w = boards[0].width / (float)(boards[0].columns + (g_drawborder ? 2 : 0));
+			block_h = boards[0].height / (float)(boards[0].visible_rows + (g_drawborder ? 2 : 0));
+
+			Mat3Identity(stats_transform);
+			Mat3Scale(stats_transform, block_w * stat_cells_w, block_h * stat_cells_h);
+			Mat3Translate(stats_transform, boards[0].x - block_w * stat_cells_w, boards[0].y + boards[0].height - block_h * stat_cells_h);
+
+			RenderBlockPanel(stats_transform, block_w, block_h, boards[0].level);
+		}
 
 		for (unsigned int i = 0; i < board_count; ++i)
 			BoardRender(boards + i, *sv_ghost);
@@ -384,12 +479,13 @@ void GameRender() {
 
 	if (board_count) {
 		if (board_count == 1)
-			RenderBlockCounts(stats_transform, 16);
+			RenderBlockCounts(stats_transform, block_h);
 
 		for (unsigned int i = 0; i < board_count; ++i)
 			BoardRenderText(boards + i);
 	}
-	
+
+	ShaderSetUniformBool(textshader, "u_masked", !g_in_game);
 	Menus_Render();
 
 	SwapBuffers(g_devcontext);
@@ -421,11 +517,21 @@ void GameSetBagSize(byte bag_size) {
 
 
 void GameBegin(int playercount) {
-	CloseAllMenus();
-	g_paused = false;
+	music_fast = false;
+	g_in_game = true;
 
-	if (board_count)
+	FreeMenus();
+	if (!IsRemoteClient())
+		SetDvarFloat(GetDvar("sv_paused"), 0.f, false);
+
+	if (board_count) {
+		if (playercount == board_count) {
+			GameRestart();
+			return;
+		}
+
 		GameEnd();
+	}
 
 	board_count = playercount;
 	boards = (Board*)calloc(board_count, sizeof(Board));
@@ -461,6 +567,8 @@ void GameBegin(int playercount) {
 }
 
 void GameRestart() {
+	SMClearSounds();
+
 	ClearBlockCounts();
 
 	byte clear_message = SVMSG_CLEAR;
@@ -472,6 +580,10 @@ void GameRestart() {
 }
 
 void GameEnd() {
+	SMClearSounds();
+
+	g_in_game = false;
+
 	for (unsigned int i = 0; i < board_count; ++i)
 		BoardFree(boards + i);
 
@@ -550,10 +662,20 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 
 	bg_offset[0] = -1.f * ((float)x / (float)w) * u;
 	bg_offset[1] = 0.f;
+
+	Menu *menu = MenuGet();
+
+	Mat3Identity(menu->transform);
+
+	float bw = (float)board_w / (float)(boards[0].columns + (g_drawborder ? 2 : 0));
+	float bh = (float)board_h / (float)(boards[0].visible_rows + (g_drawborder ? 2 : 0));
+
+	Mat3Scale(menu->transform, bw, bh);
+	Mat3Translate(menu->transform, boards[0].x + bw, boards[0].y + bh);
 }
 
 void GameInputDrop() {
-	if (board_count && !g_paused && *sv_hard_drop) {
+	if (board_count && !g_in_menu && !*sv_paused && *sv_hard_drop) {
 		scoring_drop_start_y = boards[0].block.y;
 
 		signed short lastx, lasty;
@@ -569,17 +691,21 @@ void GameInputDrop() {
 }
 
 void GameInputCW() {
-	if (board_count && !g_paused && BoardInputCW(boards + 0))
+	if (board_count && !g_in_menu && !*sv_paused && BoardInputCW(boards + 0)) {
+		SMPlaySound(g_audio.rotate, false);
 		SendBlockDataMessage();
+	}
 }
 
 void GameInputCCW() {
-	if (board_count && !g_paused && BoardInputCCW(boards + 0))
+	if (board_count && !g_in_menu && !*sv_paused && BoardInputCCW(boards + 0)) {
+		SMPlaySound(g_audio.rotate, false);
 		SendBlockDataMessage();
+	}
 }
 
 void GameInputHold() {
-	if (board_count && !g_paused && *sv_hold && can_use_held) {
+	if (board_count && !g_in_menu && !*sv_paused && *sv_hold && can_use_held) {
 		if (boards[0].held_index == 0xFF) {
 			boards[0].held_index = GetIndexOfBlockID(boards[0].block.id);
 			GameUseNextBlock();

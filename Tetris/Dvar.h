@@ -87,7 +87,7 @@ inline void SetDvarString(Dvar *dvar, char *string, bool print) {
 }
 
 //Dvar commands
-void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print);
+void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print, bool message_server);
 void HandleCommandTokens(const char **tokens, unsigned int count);
 void HandleCommandString(const char *command, bool message_server);
 

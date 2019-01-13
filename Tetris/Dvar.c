@@ -220,18 +220,43 @@ Dvar* AddDvarC(const char *name, DvarType type, DvarValue value, DvarCallback *c
 }
 
 void SetDvar(Dvar *dvar, DvarValue value, bool print) {
-	if (dvar->type == DVT_STRING) {
-		free(dvar->value.string);
-		dvar->value.string = DupString(value.string);
+	if (dvar->server) {
+		char command[256];
+		strcpy_s(command, 256, dvar->name);
+		strcat_s(command, 256, " ");
+
+		switch (dvar->type)
+		{
+		case DVT_STRING:
+			strcat_s(command, 256, value.string);
+		case DVT_FLOAT:
+		{
+			char *string = AllocStringFromFloat(value.number);
+			strcat_s(command, 256, string);
+			free(string);
+			break;
+		}
+		default:
+			ConsolePrint("You fool! You think that's gonna work?");
+			return;
+		}
+
+		MessageServerString(SVMSG_COMMAND, command);
 	}
-	else
-		dvar->value = value;
+	else {
+		if (dvar->type == DVT_STRING) {
+			free(dvar->value.string);
+			dvar->value.string = DupString(value.string);
+		}
+		else
+			dvar->value = value;
 
-	if (dvar->callback)
-		dvar->callback(dvar->value);
+		if (dvar->callback)
+			dvar->callback(dvar->value);
 
-	if (print)
-		PrintValue(dvar);
+		if (print)
+			PrintValue(dvar);
+	}
 }
 
 char* DvarAllocValueString(const Dvar *dvar) {
@@ -271,45 +296,54 @@ unsigned int DvarGetCommandString(const Dvar *dvar, char dest[], unsigned int de
 
 ////////////////
 
-void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print) {
-	if (dvar->type == DVT_CALL) {
-		if (print) {
-			ConsolePrint(dvar->name);
-			ConsolePrint("()\n");
-		}
-
-		dvar->value.call();
-		return;
+void DvarCommand(Dvar *dvar, const char **tokens, unsigned int count, bool print, bool message_server) {
+	if (dvar->server && message_server) {
+		char command[256];
+		strcpy_s(command, 256, dvar->name);
+		strcat_s(command, 256, " ");
+		strcat_s(command, 256, CombineTokens(tokens, count));
+		MessageServerString(SVMSG_COMMAND, command);
 	}
-
-	if (count > 0) {
-		switch (dvar->type) {
-		case DVT_FUNCTION:
+	else {
+		if (dvar->type == DVT_CALL) {
 			if (print) {
 				ConsolePrint(dvar->name);
-				ConsolePrint("(");
-				for (unsigned int i = 0; i < count; ++i) {
-					ConsolePrint(tokens[i]);
-					if (i < count - 1)
-						ConsolePrint(", ");
-				}
-				ConsolePrint(")\n");
+				ConsolePrint("()\n");
 			}
 
-			dvar->value.function(tokens, count);
+			dvar->value.call();
 			return;
-		case DVT_FLOAT:
-			dvar->value.number = (float)atof(tokens[0]);
-			break;
-		case DVT_STRING:
-			free(dvar->value.string);
-			dvar->value.string = DupString(tokens[0]);
-			break;
 		}
-	}
 
-	if (count > 0 && dvar->callback)
-		dvar->callback(dvar->value);
+		if (count > 0) {
+			switch (dvar->type) {
+			case DVT_FUNCTION:
+				if (print) {
+					ConsolePrint(dvar->name);
+					ConsolePrint("(");
+					for (unsigned int i = 0; i < count; ++i) {
+						ConsolePrint(tokens[i]);
+						if (i < count - 1)
+							ConsolePrint(", ");
+					}
+					ConsolePrint(")\n");
+				}
+
+				dvar->value.function(tokens, count);
+				return;
+			case DVT_FLOAT:
+				dvar->value.number = (float)atof(tokens[0]);
+				break;
+			case DVT_STRING:
+				free(dvar->value.string);
+				dvar->value.string = DupString(tokens[0]);
+				break;
+			}
+		}
+
+		if (count > 0 && dvar->callback)
+			dvar->callback(dvar->value);
+	}
 }
 
 void HandleCommand(const char **tokens, unsigned int count, const char *string, bool message_server) {
@@ -341,7 +375,7 @@ void HandleCommand(const char **tokens, unsigned int count, const char *string, 
 			}
 		}
 		else {
-			DvarCommand(dvar, tokens + 1, count - 1, true);
+			DvarCommand(dvar, tokens + 1, count - 1, true, false);
 			PrintValue(dvar);
 		}
 

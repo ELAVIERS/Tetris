@@ -18,6 +18,8 @@ inline void UseGLProgram(GLuint program) {
 
 GLint ShaderGetLocation(GLuint shader, const char *name);
 
+void ShaderSetUniformBool(GLuint program, const char *name, bool x);
+
 void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data);
 void ShaderSetUniformVec3(GLuint program, const char *name, const float data[3]);
 

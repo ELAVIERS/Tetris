@@ -1,7 +1,7 @@
 #include "Matrix.h"
 #include <stdlib.h>
 
-Mat3 g_mat3_identity = {
+const Mat3 g_mat3_identity = {
 	1.f, 0.f, 0.f,
 	0.f, 1.f, 0.f,
 	0.f, 0.f, 1.f

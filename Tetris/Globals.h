@@ -13,12 +13,15 @@
 	Global variables
 */
 
+uint32 g_music_id;
+
+bool			g_in_game;
+bool			g_in_menu;
+
 HWND			g_hwnd;
 HDC				g_devcontext;
 
 bool			g_running;
-
-bool			g_paused;
 
 float			g_delta;
 
@@ -41,6 +44,28 @@ GLuint			g_active_shader;
 
 bool			g_drawborder;
 Texture			g_textures[TEX_COUNT];
+
+typedef char * CharPtr;
+
+struct {
+	CharPtr		mus1, 
+				mus2, 
+				mus3, 
+				mus1f, 
+				mus2f, 
+				mus3f, 
+		
+				move,
+				rotate,
+				lock,
+				clear,
+				clear4,
+		
+				levelup,
+		
+				gameover;
+
+} g_audio;
 
 #define QUAD_COUNT	3
 #define QUAD_SINGLE 0

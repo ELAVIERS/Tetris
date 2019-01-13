@@ -2,6 +2,8 @@
 #include "Types.h"
 #include <stdbool.h>
 
+byte ServerGetSlotCount();
+
 void StartLocalServer();
 void StartOnlineServer();
 void ServerFrame();

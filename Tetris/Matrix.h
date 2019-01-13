@@ -9,7 +9,7 @@
 
 typedef float Mat3[3][3];
 
-extern Mat3 g_mat3_identity;
+extern const Mat3 g_mat3_identity;
 
 inline void Mat3Copy(Mat3 dest, const Mat3 src) {
 	for (int i = 0; i < 9; ++i)

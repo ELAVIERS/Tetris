@@ -1,6 +1,7 @@
 #pragma once
 #include "Types.h"
 
+//Result will be >= min and < max.
 int RandomIntInRange(int min, int max);
 
 /*

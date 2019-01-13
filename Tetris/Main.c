@@ -7,12 +7,14 @@
 #include "Lobby.h"
 #include "Server.h"
 #include "Settings.h"
+#include "SoundManager.h"
 #include "Timing.h"
 #include "Variables.h"
 #include "Window.h"
 #include <CommCtrl.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
+#include <objbase.h>
 #include <stdlib.h>
 #include <time.h>
 #include <Windows.h>
@@ -27,6 +29,8 @@
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_show) {
 	InitWindow(instance);
 	InitCommonControls();
+
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	//
 	//OpenGL initialisation
@@ -43,6 +47,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//
 	//Other
 	//
+	SMStart(16, 100);
 	G_Init();
 	CreateVariables();
 	ConsoleInit();
@@ -88,6 +93,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	WSACleanup();
 	G_Free();
 	FreeDvars();
+	SMStop();
 
 	return 0;
 }

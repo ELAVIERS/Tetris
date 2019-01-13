@@ -45,6 +45,11 @@ void GetAddressString(struct sockaddr *addr, char *out) {
 	}
 }
 
+byte ServerGetSlotCount()
+{
+	return slot_count;
+}
+
 /*
 	Send/Receive functions
 */

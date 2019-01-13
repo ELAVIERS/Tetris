@@ -2,6 +2,20 @@
 #include <stdbool.h>
 #include <Windows.h>
 
+//Reads a little-endian 2 byte value from file
+uint16 Read2B(FILE *file) {
+	unsigned char v[2];
+	fread(v, 1, 2, file);
+	return v[0] + (v[1] << 8);
+}
+
+//Reads a little-endian 4 byte value from file
+uint32 Read4B(FILE *file) {
+	unsigned char v[4];
+	fread(v, 1, 4, file);
+	return v[0] + (v[1] << 8) + (v[2] << 16) + (v[3] << 24);
+}
+
 unsigned int FindFilesInDirectory(const char *filepath, char ***out_files, DWORD filter) {
 	WIN32_FIND_DATAA find_data;
 	HANDLE h_find = FindFirstFileA(filepath, &find_data);

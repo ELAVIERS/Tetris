@@ -90,14 +90,82 @@ void DBGCreateBag() {
 	ConsolePrint("}\n");
 }
 
+#include "SoundManager.h"
+
+void G_StopAudio() {
+	SMClearSounds();
+}
+
+void SetSound(char **dest, const char **tokens, unsigned int count, SoundCategory cat)
+{
+	free(*dest);
+	*dest = DupString(tokens[1]);
+
+	float vol = 1.f;
+
+	if (count >= 3)
+		vol = (float)atof(tokens[2]);
+
+	WaveFileNode *wav = SMGetWav(*dest);
+	if (wav) {
+		wav->category = cat;
+		wav->volume = vol;
+	}
+}
+
+void G_SetAudioName(const char **tokens, unsigned int count) {
+
+#define SET_IF_ID(ID, VAR, CAT) if (strcmp(tokens[0], ID) == 0) SetSound(&VAR, tokens, count, CAT)
+
+	if (count >= 2) {
+				SET_IF_ID("mus1", g_audio.mus1, SC_MUSIC);
+		else	SET_IF_ID("mus2", g_audio.mus2, SC_MUSIC);
+		else	SET_IF_ID("mus3", g_audio.mus3, SC_MUSIC);
+		else	SET_IF_ID("mus1f", g_audio.mus1f, SC_MUSIC);
+		else	SET_IF_ID("mus2f", g_audio.mus2f, SC_MUSIC);
+		else	SET_IF_ID("mus3f", g_audio.mus3f, SC_MUSIC);
+		else	SET_IF_ID("move", g_audio.move, SC_GENERIC);
+		else	SET_IF_ID("rotate", g_audio.rotate, SC_GENERIC);
+		else	SET_IF_ID("lock", g_audio.lock, SC_GENERIC);
+		else	SET_IF_ID("clear4", g_audio.clear4, SC_GENERIC);
+		else	SET_IF_ID("clear", g_audio.clear, SC_GENERIC);
+		else	SET_IF_ID("levelup", g_audio.levelup, SC_GENERIC);
+		else	SET_IF_ID("gameover", g_audio.gameover, SC_GENERIC);
+	}
+}
+
+void G_PlaySound(const char **tokens, unsigned int count) {
+	if (count >= 1) {
+		SMPlaySound(tokens[0], false);
+	}
+}
+
+void C_Paused(DvarValue floatvalue) {
+	if (floatvalue.number)
+		SMPauseSound(g_music_id);
+	else
+		SMResumeSound(g_music_id);
+}
+
 #include "Board.h"
 #include "InputManager.h"
 #include "Lobby.h"
+#include "Settings.h"
 
 void CreateVariables() {
 	AddCvar(AddDStringC("cfg_texture", "", C_RunAsConfig, false));
+	AddCvar(AddDStringC("cfg_audio", "", C_RunAsConfig, false));
 
 	AddCvar(AddDStringC("name", "Player", C_Name, false));
+
+	Dvar *dv_volume =		AddDFloat("volume", 0.25f, false);
+	Dvar *dv_volume_music = AddDFloat("volume_music", 0.8f, false);
+
+	volume = &dv_volume->value.number;
+	volume_music = &dv_volume_music->value.number;
+
+	AddCvar(dv_volume);
+	AddCvar(dv_volume_music);
 
 	////
 	AddDFunction("sv_admin_add", FUNC_AddAdmin, true);
@@ -108,6 +176,7 @@ void CreateVariables() {
 	AddDFunction("size", FUNC_Size, false);
 
 	AddDCall("lobby", LobbyShow, false);
+	AddDCall("settings", SettingsOpen, false);
 
 	AddDFunction("bind", Bind, false);
 	AddDFunction("bindaxis", BindAxis, false);
@@ -133,6 +202,14 @@ void CreateVariables() {
 	AddDFunction("cl_set_tex", CLSetTexture, false);
 	AddDFunction("cl_set_texid_size", CLSetTextureIndexSize, false);
 	AddDCall("cl_textures_clear", G_ClearTextures, false);
+
+	AddDCall("cl_audio_stop", G_StopAudio, false);
+	AddDFunction("cl_set_aud", G_SetAudioName, false);
+	AddDFunction("cl_play_sound", G_PlaySound, false);
+
+	cl_fast_music_zone =		ValueAsFloatPtr(AddDFloat("cl_fast_music_zone", 5.f, false));
+
+	sv_paused =					ValueAsFloatPtr(AddDFloatC("sv_paused", 1.f, C_Paused, true));
 
 	sv_bag_size =				ValueAsFloatPtr(AddDFloatC("sv_bag_size", 0, C_BagSize, true));
 	sv_queue_size =				ValueAsFloatPtr(AddDFloatC("sv_queue_size", 4, C_QueueSize, true));

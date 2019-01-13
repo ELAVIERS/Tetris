@@ -44,7 +44,7 @@ unsigned int BlockTypesGetCount() {
 }
 
 int GetIndexOfBlockID(byte block_id) {
-	for (int i = 0; i < type_count; ++i)
+	for (unsigned int i = 0; i < type_count; ++i)
 		if (blocktypes[i].id == block_id)
 			return i;
 
@@ -127,26 +127,26 @@ void ClearBlockCounts() {
 		blocktypes[i].count = 0;
 }
 
-void RenderBlockPanel(Mat3 transform, float border_width, unsigned int level) {
+void RenderBlockPanel(Mat3 transform, float border_width, float border_height, unsigned int level) {
 	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	if (g_drawborder)
-		RenderPanel(0, 0, transform[0][0], transform[1][1], border_width, border_width);
+		RenderPanel(transform[2][0], transform[2][1], transform[0][0], transform[1][1], border_width, border_height);
 	else
-		RenderRect(0, 0, transform[0][0], transform[1][1]);
+		RenderRect(transform[2][0], transform[2][1], transform[0][0], transform[1][1]);
 
 	unsigned int total_rows = 0;
 	for (unsigned int i = 0; i < type_count; ++i)
 		total_rows += blocktypes[i].size + 1;
 
-	float block_size = (transform[1][1] - border_width * 2.f - 16.f) / (float)total_rows;
+	float block_size = (transform[1][1] - border_height * 2.f - 16.f) / (float)total_rows;
 
 	Mat3 block_transform;
 	Mat3Identity(block_transform);
 	Mat3Scale(block_transform, block_size, block_size);
-	Mat3Translate(block_transform, transform[2][0] + border_width + 8, transform[2][1] + border_width + 8);
+	Mat3Translate(block_transform, transform[2][0] + border_width + 8, transform[2][1] + border_height + 8);
 
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
 
@@ -157,7 +157,7 @@ void RenderBlockPanel(Mat3 transform, float border_width, unsigned int level) {
 	}
 }
 
-void RenderBlockCounts(Mat3 transform, float border_width) {
+void RenderBlockCounts(Mat3 transform, float block_h) {
 	unsigned int total_rows = 0;
 	unsigned int min_size = ~0;
 	for (unsigned int i = 0; i < type_count; ++i) {
@@ -166,12 +166,12 @@ void RenderBlockCounts(Mat3 transform, float border_width) {
 			min_size = blocktypes[i].size;
 	}
 
-	float block_size = (transform[1][1] - border_width * 2.f - 16.f) / (float)total_rows;
+	float block_size = (transform[1][1] - block_h * 2.f - 16.f) / (float)total_rows;
 
 	Mat3 char_transform;
 	Mat3Identity(char_transform);
-	Mat3Scale(char_transform, block_size * min_size, block_size * min_size);
-	Mat3Translate(char_transform, transform[2][0] + border_width + 8 + block_size * 5.f, transform[2][1] + border_width + 8);
+	Mat3Scale(char_transform, block_size * 1, block_size * 1);
+	Mat3Translate(char_transform, transform[2][0] + block_h + block_size * 4.f, transform[2][1] + block_h * 2);
 
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_FONT].glid);
 

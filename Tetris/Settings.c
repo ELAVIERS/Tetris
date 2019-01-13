@@ -3,6 +3,7 @@
 #include "IO.h"
 #include "Resource.h"
 #include "String.h"
+#include "Variables.h"
 #include <stdlib.h>
 #include <CommCtrl.h>
 #include <Windows.h>
@@ -11,25 +12,28 @@
 #define ROW_HALF_WIDTH 248
 
 HWND hwnd_settings = NULL;
-HWND hwnd_setting_font_texture;
+HWND hwnd_setting_texture_cfg;
+HWND hwnd_setting_audio_cfg;
 HWND hwnd_setting_name;
+HWND hwnd_setting_volume;
+HWND hwnd_setting_volume_music;
 
-char **texture_config_filepaths = NULL;
-unsigned int texture_config_count = 0;
+char ** poo(const char *search, const char *dir, HWND hwnd, unsigned int *out_count) {
+	char **names = NULL;
+	unsigned int count = 0;
 
-inline void AddComboBoxEntries() {
 	char **dirs;
-	unsigned int dircount = FindFilesInDirectory("textures/*", &dirs, FILE_ATTRIBUTE_DIRECTORY);
+	unsigned int dircount = FindFilesInDirectory(search, &dirs, FILE_ATTRIBUTE_DIRECTORY);
 
 	if (dircount == 0)
-		return;
+		return NULL;
 
 	free(dirs[0]);
 	free(dirs[1]);
 
 	char path[MAX_PATH];
 	for (unsigned int i = 2; i < dircount; ++i) {
-		strcpy_s(path, MAX_PATH, "textures/");
+		strcpy_s(path, MAX_PATH, dir);
 		strcat_s(path, MAX_PATH, dirs[i]);
 		free(dirs[i]);
 		size_t end = strlen(path) + 1;
@@ -38,15 +42,15 @@ inline void AddComboBoxEntries() {
 
 		char **filenames;
 		unsigned int filecount = FindFilesInDirectory(path, &filenames, FILTER_NONE);
-		texture_config_filepaths = (char**)realloc(texture_config_filepaths, (texture_config_count + filecount) * sizeof(char*));
+		names = (char**)realloc(names, (count + filecount) * sizeof(char*));
 
 		for (unsigned int j = 0; j < filecount; ++j) {
 			path[end] = '\0';
 			strcat_s(path, MAX_PATH, filenames[j]);
-			texture_config_filepaths[texture_config_count++] = DupString(path);
+			names[count++] = DupString(path);
 
 			CutExt(filenames[j]);
-			SendMessage(hwnd_setting_font_texture, CB_ADDSTRING, 0, (LPARAM)filenames[j]);
+			SendMessage(hwnd, CB_ADDSTRING, 0, (LPARAM)filenames[j]);
 
 			free(filenames[j]);
 		}
@@ -55,12 +59,28 @@ inline void AddComboBoxEntries() {
 	}
 
 	free(dirs);
+
+	*out_count = count;
+	return names;
+}
+
+char **texture_config_filepaths = NULL;
+char **audio_config_filepaths = NULL;
+unsigned int texture_config_count = 0;
+unsigned int audio_config_count = 0;
+
+inline void AddComboBoxEntries() {
+	texture_config_filepaths = poo("textures/*", "textures/", hwnd_setting_texture_cfg, &texture_config_count);
+	audio_config_filepaths = poo("audio/*", "audio/", hwnd_setting_audio_cfg, &audio_config_count);
 }
 
 void SettingsFree() {
 	FreeTokens(texture_config_filepaths, texture_config_count);
+	FreeTokens(audio_config_filepaths, audio_config_count);
 	texture_config_count = 0;
+	audio_config_count = 0;
 	texture_config_filepaths = NULL;
+	audio_config_filepaths = NULL;
 }
 
 inline void AddStaticLabel(HINSTANCE instance, HWND parent, const char *text, unsigned int row) {
@@ -76,15 +96,34 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		AddStaticLabel(instance, hwnd, "Texture Config", 0);
 
-		hwnd_setting_font_texture = CreateWindowA(WC_COMBOBOXA, NULL, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE, 
-			ROW_HALF_WIDTH, 0, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
+		hwnd_setting_texture_cfg = CreateWindowA(WC_COMBOBOXA, NULL, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE, 
+			ROW_HALF_WIDTH, 0, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, (HMENU)0, instance, NULL);
 
-		AddStaticLabel(instance, hwnd, "Multiplayer Name", 1);
+		AddStaticLabel(instance, hwnd, "Audio Config", 1);
 
-		hwnd_setting_name = CreateWindowExA(WS_EX_CLIENTEDGE, WC_EDITA, NULL, WS_CHILD | WS_VISIBLE, 
-			ROW_HALF_WIDTH, ROW_HEIGHT, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
+		hwnd_setting_audio_cfg = CreateWindowA(WC_COMBOBOXA, NULL, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE,
+			ROW_HALF_WIDTH, ROW_HEIGHT, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, (HMENU)1, instance, NULL);
 
-		
+		AddStaticLabel(instance, hwnd, "Multiplayer Name", 2);
+
+		hwnd_setting_name = CreateWindowExA(WS_EX_CLIENTEDGE, WC_EDITA, GetDvar("name")->value.string, WS_CHILD | WS_VISIBLE, 
+			ROW_HALF_WIDTH, ROW_HEIGHT * 2, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, NULL, instance, NULL);
+
+		AddStaticLabel(instance, hwnd, "Master Volume", 3);
+
+		hwnd_setting_volume = CreateWindowExA(WS_EX_CLIENTEDGE, TRACKBAR_CLASSA, "Volume", TBS_AUTOTICKS | WS_CHILD | WS_VISIBLE,
+			ROW_HALF_WIDTH, ROW_HEIGHT * 3, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, 0, instance, NULL);
+
+		SendMessage(hwnd_setting_volume, TBM_SETRANGE, FALSE, MAKELPARAM(0, 20));
+		SendMessage(hwnd_setting_volume, TBM_SETPOS, TRUE, (int)((*volume) * 20 * 2));
+
+		AddStaticLabel(instance, hwnd, "Music Volume", 4);
+
+		hwnd_setting_volume_music = CreateWindowExA(WS_EX_CLIENTEDGE, TRACKBAR_CLASSA, "Music Volume", TBS_AUTOTICKS | WS_CHILD | WS_VISIBLE,
+			ROW_HALF_WIDTH, ROW_HEIGHT * 4, ROW_HALF_WIDTH, ROW_HEIGHT, hwnd, 0, instance, NULL);
+
+		SendMessage(hwnd_setting_volume_music, TBM_SETRANGE, FALSE, MAKELPARAM(0, 20));
+		SendMessage(hwnd_setting_volume_music, TBM_SETPOS, TRUE, (int)((*volume_music) * 20));
 
 		AddComboBoxEntries();
 		break;
@@ -95,7 +134,16 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case CBN_SELCHANGE:
 		{
 			int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
-			SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index], true);
+
+			switch (LOWORD(wparam))
+			{
+			case 0:
+				SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index], true);
+				break;
+			case 1:
+				SetDvarString(GetDvar("cfg_audio"), audio_config_filepaths[index], true);
+				break;
+			}
 
 			SaveCvars();
 		}
@@ -111,6 +159,17 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		}
 		}
 		break;
+
+	case WM_HSCROLL:
+	{
+		if ((HWND)lparam == hwnd_setting_volume)
+			SetDvarFloat(GetDvar("volume"), SendMessage(hwnd_setting_volume, TBM_GETPOS, 0, 0) / 20.f / 2.f, true);
+		else if ((HWND)lparam == hwnd_setting_volume_music)
+			SetDvarFloat(GetDvar("volume_music"), SendMessage(hwnd_setting_volume_music, TBM_GETPOS, 0, 0) / 20.f, true);
+
+		SaveCvars();
+		break;
+	}
 
 	case WM_CLOSE:
 		DestroyWindow(hwnd);
@@ -150,7 +209,7 @@ void SettingsInit() {
 
 void SettingsOpen() {
 	if (!hwnd_settings) {
-		hwnd_settings = CreateWindowA("settings_window", "Settings", WS_OVERLAPPED | WS_SYSMENU, CW_USEDEFAULT, 0, 512, 512, NULL, NULL, GetModuleHandle(NULL), NULL);
+		hwnd_settings = CreateWindowA("settings_window", "Settings", WS_OVERLAPPED | WS_SYSMENU, CW_USEDEFAULT, 0, 512, 40 + ROW_HEIGHT * 5, NULL, NULL, GetModuleHandle(NULL), NULL);
 		
 		ShowWindow(hwnd_settings, SW_SHOW);
 	}

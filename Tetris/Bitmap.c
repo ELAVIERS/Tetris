@@ -1,21 +1,8 @@
 #include "Bitmap.h"
 #include "Console.h"
+#include "IO.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-//Reads a little-endian 2 byte value from file
-inline uint16 Read2B(FILE *file) {
-	unsigned char v[2];
-	fread(v, 1, 2, file);
-	return v[0] + (v[1] << 8);
-}
-
-//Reads a little-endian 4 byte value from file
-inline uint32 Read4B(FILE *file) {
-	unsigned char v[4];
-	fread(v, 1, 4, file);
-	return v[0] + (v[1] << 8) + (v[2] << 16) + (v[3] << 24);
-}
 
 //Loads a BMP file from filepath
 //http://www.dragonwins.com/domains/getteched/bmp/bmpfileformat.htm

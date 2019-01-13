@@ -6,7 +6,7 @@
 
 /*
 CreateNewBlock
-Sets contents of block to the given indexe's blockdata
+Sets contents of block to the given index's blockdata
 
 index				the index of the block data in the array
 block(out)			the block to become random
@@ -31,5 +31,5 @@ void ClearBlocks();
 void SendBlockInfo(int playerid);
 
 void ClearBlockCounts();
-void RenderBlockPanel(Mat3 transform, float block_size, unsigned int level);
-void RenderBlockCounts(Mat3 transform, float block_size);
+void RenderBlockPanel(Mat3 transform, float block_w, float block_h, unsigned int level);
+void RenderBlockCounts(Mat3 transform, float block_h);

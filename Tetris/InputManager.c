@@ -72,7 +72,7 @@ typedef struct KeyBind_s {
 
 KeyBind *binds;
 
-inline KeyBind *AllocBind(WORD key) {
+KeyBind *AllocBind(WORD key) {
 	KeyBind *bind = (KeyBind*)malloc(sizeof(KeyBind));
 	bind->key = key;
 	bind->next = NULL;
@@ -109,6 +109,16 @@ inline KeyBind *AllocBind(WORD key) {
 	return bind;
 }
 
+void FreeBind(KeyBind *bind)
+{
+	if (bind->data.args.count) {
+		for (unsigned int i = 0; i < bind->data.args.count; ++i)
+			free(bind->data.args.tokens[i]);
+
+		free(bind->data.args.tokens);
+	}
+}
+
 void Bind(const char **tokens, unsigned int count) {
 	if (count < 2)
 		return;
@@ -124,8 +134,13 @@ void Bind(const char **tokens, unsigned int count) {
 
 		bind->data.type = BIND_COMMAND;
 		bind->data.args.count = count - 2;
-		for (unsigned int i = 0; i < bind->data.args.count; ++i)
-			bind->data.args.tokens[i] = DupString(tokens[i + 2]);
+
+		if (bind->data.args.count) {
+			bind->data.args.tokens = (char**)malloc(sizeof(char*) * bind->data.args.count);
+
+			for (unsigned int i = 0; i < bind->data.args.count; ++i)
+				bind->data.args.tokens[i] = DupString(tokens[i + 2]);
+		}
 	}
 }
 
@@ -148,11 +163,9 @@ void BindAxis(const char **tokens, unsigned int count) {
 }
 
 void ClearBinds() {
-	KeyBind *next;
-
 	while (binds) {
-		next = binds->next;
-		free(binds);
+		KeyBind *next = binds->next;
+		FreeBind(binds);
 		binds = next;
 	}
 }
@@ -168,9 +181,9 @@ void KeyDown(WORD vk) {
 	case VK_F11: FullscreenToggle(); return;
 	}
 
-	if (!g_paused) {
+	if (!g_in_menu) {
 		if (vk == VK_ESCAPE)
-			CreateMenu_Pause();
+			CreateMenu_Pause(true);
 	}
 	else {
 		switch (vk) {
@@ -194,7 +207,7 @@ void KeyDown(WORD vk) {
 		if (bind->key == vk) {
 			switch (bind->data.type) {
 			case BIND_COMMAND:
-				DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count, (bool)*bind_print);
+				DvarCommand(bind->dvar, bind->data.args.tokens, bind->data.args.count, (bool)*bind_print, true);
 				break;
 			case BIND_AXIS:
 				SetDvarFloat(bind->dvar, bind->dvar->value.number + bind->data.axisvalue, (bool)*bind_print);

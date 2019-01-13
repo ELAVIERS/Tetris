@@ -72,6 +72,8 @@ BOOL CALLBACK ConnectProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 }
 
 void ClientFrame() {
+
+
 	if (client_socket != INVALID_SOCKET) {
 		while (NetworkReceiveMsgBuffer(client_socket, &clientmsg)) {
 			if (clientmsg.dynamic_buffer) {
@@ -88,7 +90,7 @@ void ClientFrame() {
 
 			ConsolePrint("Lost connection to server\n");
 
-			CloseAllMenus();
+			FreeMenus();
 			GameEnd();
 			CreateMenu_Main();
 		}

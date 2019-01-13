@@ -1,8 +1,13 @@
 #pragma once
+#include "Types.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <Windows.h>
 
 #define FILTER_NONE 0xFFFFFFFF
+
+uint16 Read2B(FILE *file);
+uint32 Read4B(FILE *file);
 
 /*
 	FindFilesInDirectory

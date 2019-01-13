@@ -78,6 +78,10 @@ GLint ShaderGetLocation(GLuint program, const char *name) {
 	return location;
 }
 
+void ShaderSetUniformBool(GLuint program, const char *name, bool x) {
+	glUniform1i(ShaderGetLocation(program, name), x ? 1 : 0);
+}
+
 void ShaderSetUniformMat3(GLuint program, const char *name, const Mat3 data) {
 	glUniformMatrix3fv(ShaderGetLocation(program, name), 1, GL_FALSE, &data[0][0]);
 }

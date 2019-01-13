@@ -222,5 +222,5 @@ void MessageServerString(MessageID id, const char *string) {
 
 	strcpy_s(buffer + 1, MSG_LEN - 1, string);
 
-	MessageServer(buffer, (unsigned int)strlen(string) + 2);
+	MessageServer(buffer, (uint16)strlen(string) + 2);
 }
