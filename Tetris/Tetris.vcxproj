@@ -72,26 +72,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)Build\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)Dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)Build\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)Dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)Build\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)Dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\Lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Build\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)Dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Dependencies\Lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -101,7 +97,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
@@ -119,7 +115,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
       <PreprocessorDefinitions>GLEW_STATIC;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
@@ -141,7 +137,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
@@ -163,7 +159,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;glew32s.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;user32.lib;gdi32.lib;ws2_32.lib;opengl32.lib;;ole32.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(ProjectDir)Audio $(TargetDir)Audio /E /I /R /Y
@@ -184,6 +180,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClCompile Include="Error.c" />
     <ClCompile Include="Font.c" />
     <ClCompile Include="Game.c" />
+    <ClCompile Include="GL.c" />
     <ClCompile Include="Globals.c" />
     <ClCompile Include="IO.c" />
     <ClCompile Include="InputManager.c" />
@@ -199,6 +196,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClCompile Include="Resample.c" />
     <ClCompile Include="Resource.c" />
     <ClCompile Include="RNG.c" />
+    <ClCompile Include="Scoring.c" />
     <ClCompile Include="Server.c" />
     <ClCompile Include="Settings.c" />
     <ClCompile Include="Shader.c" />
@@ -225,6 +223,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="Error.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GL.h" />
     <ClInclude Include="Globals.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="InputManager.h" />
@@ -239,6 +238,7 @@ xcopy $(ProjectDir)config.cfg $(TargetDir) /R /Y</Command>
     <ClInclude Include="Resample.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RNG.h" />
+    <ClInclude Include="Scoring.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Shader.h" />

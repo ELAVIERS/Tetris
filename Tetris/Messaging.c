@@ -47,6 +47,7 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 
 	case SVMSG_JOIN:
 	case SVMSG_PLACE:
+	case SVMSG_STOP:
 		buffer[1] = playerid;
 		ServerBroadcast(buffer, 2, playerid);
 		break;
@@ -80,9 +81,10 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 
 	case SVMSG_BLOCKDATA:
 		buffer[1] = playerid;
-		buffer[2] = message[1];
-		memcpy_s(buffer + 3, MSG_LEN - 3, message + 2, buffer[2] * buffer[2]);
-		ServerBroadcast(buffer, 3 + buffer[2] * buffer[2], playerid);
+		buffer[2] = message[1];		//id
+		buffer[3] = message[2];		//size
+		memcpy_s(buffer + 4, MSG_LEN - 4, message + 3, buffer[3] * buffer[3]);
+		ServerBroadcast(buffer, 4 + buffer[3] * buffer[3], playerid);
 		break;
 
 	case SVMSG_QUEUE:
@@ -183,7 +185,7 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		GameBoardSetBlockPos(ClientIDToBoardID(message[1]), BufferToInt16(message + 2), BufferToInt16(message + 4));
 		break;
 	case SVMSG_BLOCKDATA:
-		GameBoardSetBlockData(ClientIDToBoardID(message[1]), message[2], message + 3);
+		GameBoardSetBlockData(ClientIDToBoardID(message[1]), message[2], message[3], message + 4);
 		break;
 	case SVMSG_QUEUE:
 		GameBoardSetQueue(ClientIDToBoardID(message[1]), message[2], message + 3);
@@ -208,6 +210,10 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 
 	case SVMSG_START:
 		GameBegin(LobbyGetSize());
+		break;
+
+	case SVMSG_STOP:
+		GameBoardFinished(ClientIDToBoardID(message[1]));
 		break;
 
 	case SVMSG_BOARD:

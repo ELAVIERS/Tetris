@@ -23,6 +23,10 @@ void C_QueueSize(DvarValue floatvalue) {
 	GameSizeUpdate(0, 0);
 }
 
+void C_StatsMode(DvarValue unused) {
+	GameSizeUpdate(0, 0);
+}
+
 void C_BagSize(DvarValue floatvalue) {
 	GameSetBagSize((byte)floatvalue.number);
 }
@@ -129,6 +133,8 @@ void G_SetAudioName(const char **tokens, unsigned int count) {
 		else	SET_IF_ID("lock", g_audio.lock, SC_GENERIC);
 		else	SET_IF_ID("clear4", g_audio.clear4, SC_GENERIC);
 		else	SET_IF_ID("clear", g_audio.clear, SC_GENERIC);
+		else	SET_IF_ID("backtoback", g_audio.backtoback, SC_GENERIC);
+		else	SET_IF_ID("perfectclear", g_audio.perfectclear, SC_GENERIC);
 		else	SET_IF_ID("levelup", g_audio.levelup, SC_GENERIC);
 		else	SET_IF_ID("gameover", g_audio.gameover, SC_GENERIC);
 	}
@@ -208,6 +214,7 @@ void CreateVariables() {
 	AddDFunction("cl_play_sound", G_PlaySound, false);
 
 	cl_fast_music_zone =		ValueAsFloatPtr(AddDFloat("cl_fast_music_zone", 5.f, false));
+	cl_stats_mode =				ValueAsFloatPtr(AddDFloatC("cl_stats_mode", 1.f, C_StatsMode, false));
 
 	sv_paused =					ValueAsFloatPtr(AddDFloatC("sv_paused", 1.f, C_Paused, true));
 
@@ -232,6 +239,8 @@ void CreateVariables() {
 
 	sv_lock_delay =				ValueAsFloatPtr(AddDFloat("sv_lock_delay", .5f, true));
 	sv_drop_delay =				ValueAsFloatPtr(AddDFloat("sv_drop_delay", .1f, true));
+
+	sv_scoring_nes =			ValueAsFloatPtr(AddDFloat("sv_scoring_nes", 1.f, true));
 
 	AddDCall("dbg_create_bag", DBGCreateBag, false);
 }

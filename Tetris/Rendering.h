@@ -11,7 +11,7 @@
 	transform			transformation to apply after block translation
 	quad				the quad to render tiles with
 */
-void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_transform, const Quad* quad, unsigned int level);
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_transform, const Quad* quad, int level);
 
 void RenderRect(float x, float y, float w, float h);
 void RenderPanel(float x, float y, float w, float h, float bw, float bh);

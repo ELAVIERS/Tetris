@@ -47,7 +47,7 @@ UINT32 buffer_frame_count;
 
 float time_to_next_buffer_feed = 0.f;
 
-bool SMStart(uint16 bits_per_sample, uint32 buffer_duration_millis) {
+bool SMStart(uint32 buffer_duration_millis) {
 	HRESULT result = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, &IID_IMMDeviceEnumerator, (void**)&enumerator);
 	CHECK(result);
 
@@ -68,8 +68,8 @@ bool SMStart(uint16 bits_per_sample, uint32 buffer_duration_millis) {
 	CHECK(result);
 
 	wave_format.wFormatTag = WAVE_FORMAT_PCM;
-	wave_format.wBitsPerSample = bits_per_sample;
-	wave_format.nChannels = descriptor->nChannels;
+	wave_format.wBitsPerSample = 16;
+	wave_format.nChannels = 2;
 	wave_format.nSamplesPerSec = descriptor->nSamplesPerSec;
 	wave_format.nBlockAlign = (wave_format.wBitsPerSample * wave_format.nChannels) / 8;
 	wave_format.nAvgBytesPerSec = wave_format.nSamplesPerSec * wave_format.nBlockAlign;
@@ -208,8 +208,10 @@ void SMFeedBuffer(float deltaTime) {
 						if (frames_written == 0) {
 							if (player == first_player)
 								first_player = nextPlayer;
-							else
+							else if (prevPlayer)
 								prevPlayer->next = nextPlayer;
+							else
+								first_player = nextPlayer;
 
 							free(player);
 						}

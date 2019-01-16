@@ -4,6 +4,24 @@
 #include "Matrix.h"
 #include "Quad.h"
 
+
+typedef struct {
+	unsigned int size;
+	byte *data;
+
+	byte start_row;
+	byte start_column;
+	char id;
+} BlockType;
+
+typedef struct BlockCount_s {
+	BlockType* type;
+
+	unsigned int count;
+
+	struct BlockCount_s *next;
+} BlockCount;
+
 /*
 CreateNewBlock
 Sets contents of block to the given index's blockdata
@@ -17,8 +35,6 @@ void RenderBlockByIndex(int index, Mat3 transform, const Quad *quad, unsigned in
 
 int GetIndexOfBlockID(byte block_id);
 
-void CurrentBlockIncrementCount();
-
 unsigned int BlockTypesGetCount();
 
 //sv_add_block
@@ -30,6 +46,12 @@ void ClearBlocks();
 //Sends commands to a player defining block info
 void SendBlockInfo(int playerid);
 
-void ClearBlockCounts();
 void RenderBlockPanel(Mat3 transform, float block_w, float block_h, unsigned int level);
-void RenderBlockCounts(Mat3 transform, float block_h);
+
+BlockCount *CreateBlockCountList();
+void FreeBlockCountList(BlockCount *list);
+
+void ClearBlockCounts(BlockCount *first);
+void IncrementBlockCount(BlockCount *first, char id);
+
+void RenderBlockCounts(BlockCount *first, Mat3 transform, float block_w, float block_h);

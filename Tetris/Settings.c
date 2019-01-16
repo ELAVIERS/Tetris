@@ -88,6 +88,8 @@ inline void AddStaticLabel(HINSTANCE instance, HWND parent, const char *text, un
 	SetWindowTextA(hwnd, text);
 }
 
+bool window_created;
+
 LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	switch (msg) {
 	case WM_CREATE:
@@ -130,44 +132,49 @@ LRESULT CALLBACK SettingsProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	}
 
 	case WM_COMMAND:
-		switch (HIWORD(wparam)) {
-		case CBN_SELCHANGE:
-		{
-			int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
-
-			switch (LOWORD(wparam))
+		if (window_created) {
+			switch (HIWORD(wparam)) {
+			case CBN_SELCHANGE:
 			{
-			case 0:
-				SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index], true);
-				break;
-			case 1:
-				SetDvarString(GetDvar("cfg_audio"), audio_config_filepaths[index], true);
+				int index = (int)SendMessage((HWND)lparam, CB_GETCURSEL, 0, 0);
+
+				switch (LOWORD(wparam))
+				{
+				case 0:
+					SetDvarString(GetDvar("cfg_texture"), texture_config_filepaths[index], true);
+					break;
+				case 1:
+					SetDvarString(GetDvar("cfg_audio"), audio_config_filepaths[index], true);
+					break;
+				}
+
+				SaveCvars();
+			}
+			break;
+			case EN_CHANGE:
+			{
+
+				char namebuffer[64];
+				GetWindowTextA(hwnd_setting_name, namebuffer, 64);
+				SetDvarString(GetDvar("name"), namebuffer, true);
+
+				SaveCvars();
 				break;
 			}
-
-			SaveCvars();
-		}
-			break;
-		case EN_CHANGE:
-		{	
-			char namebuffer[64];
-			GetWindowTextA(hwnd_setting_name, namebuffer, 64);
-			SetDvarString(GetDvar("name"), namebuffer, true);
-
-			SaveCvars();
-			break;
-		}
+			}
 		}
 		break;
 
 	case WM_HSCROLL:
 	{
-		if ((HWND)lparam == hwnd_setting_volume)
-			SetDvarFloat(GetDvar("volume"), SendMessage(hwnd_setting_volume, TBM_GETPOS, 0, 0) / 20.f / 2.f, true);
-		else if ((HWND)lparam == hwnd_setting_volume_music)
-			SetDvarFloat(GetDvar("volume_music"), SendMessage(hwnd_setting_volume_music, TBM_GETPOS, 0, 0) / 20.f, true);
+		if (window_created) {
+			if ((HWND)lparam == hwnd_setting_volume)
+				SetDvarFloat(GetDvar("volume"), SendMessage(hwnd_setting_volume, TBM_GETPOS, 0, 0) / 20.f / 2.f, true);
+			else if ((HWND)lparam == hwnd_setting_volume_music)
+				SetDvarFloat(GetDvar("volume_music"), SendMessage(hwnd_setting_volume_music, TBM_GETPOS, 0, 0) / 20.f, true);
 
-		SaveCvars();
+			SaveCvars();
+		}
 		break;
 	}
 
@@ -209,8 +216,10 @@ void SettingsInit() {
 
 void SettingsOpen() {
 	if (!hwnd_settings) {
+		window_created = false;
 		hwnd_settings = CreateWindowA("settings_window", "Settings", WS_OVERLAPPED | WS_SYSMENU, CW_USEDEFAULT, 0, 512, 40 + ROW_HEIGHT * 5, NULL, NULL, GetModuleHandle(NULL), NULL);
-		
+		window_created = true;
+
 		ShowWindow(hwnd_settings, SW_SHOW);
 	}
 }

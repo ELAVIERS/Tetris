@@ -122,12 +122,14 @@ typedef enum MessageID_e {
 	SVMSG_BLOCKDATA,
 	/*
 		SERVER
-			1:SIZE (BYTE)
-			2:DATA (BYTE ARRAY)
-		CLIENT
-			1:PLAYER ID (BYTE)
+			1:ID (BYTE)
 			2:SIZE (BYTE)
 			3:DATA (BYTE ARRAY)
+		CLIENT
+			1:PLAYER ID (BYTE)
+			2:ID (BYTE)
+			3:SIZE (BYTE)
+			4:DATA (BYTE ARRAY)
 	*/
 
 	SVMSG_PLACE,
@@ -160,6 +162,15 @@ typedef enum MessageID_e {
 	*/
 
 	SVMSG_START,
+	/*
+		CLIENT
+	*/
+
+	SVMSG_STOP,
+	/*
+		CLIENT
+			1:PLAYER ID (BYTE)
+	*/
 
 	SVMSG_BOARD,
 	/*

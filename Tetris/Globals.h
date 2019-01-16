@@ -1,9 +1,9 @@
 #pragma once
 #include "Font.h"
+#include "GL.h"
 #include "Matrix.h"
 #include "Quad.h"
 #include "Texture.h"
-#include <GL/glew.h>
 #include <stdbool.h>
 #include <Windows.h>
 
@@ -60,6 +60,8 @@ struct {
 				lock,
 				clear,
 				clear4,
+				backtoback,
+				perfectclear,
 		
 				levelup,
 		

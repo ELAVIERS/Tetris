@@ -1,5 +1,6 @@
 #pragma once
 #include "Block.h"
+#include "BlockManager.h"
 #include "Quad.h"
 #include "Text.h"
 #include "Texture.h"
@@ -30,18 +31,21 @@ typedef struct Garbage_s {
 	block			the current block
 */
 typedef struct Board_s {
+	bool active;
+
 	float x, y;
 	float width, height;
 
 	byte **data;
 	byte rows, columns, visible_rows;
+	byte stats_rows, stats_columns;
 
 	Block block;
 	short ghost_y;
 
 	Text *nametag;
 
-	uint16 level;
+	int16 level;
 	uint16 level_clears;
 	uint32 line_clears;
 	uint32 score;
@@ -54,6 +58,8 @@ typedef struct Board_s {
 	byte bag_element_count;
 
 	byte held_index;
+
+	BlockCount *first_count_node;
 } Board;
 
 void BoardCreate(Board*);
@@ -72,8 +78,8 @@ int BoardSubmitBlock(Board*);
 
 void BoardUseNextBlock(Board*);
 
-void BoardRender(const Board*, bool draw_ghost);
-void BoardRenderText(const Board*);
+void BoardRender(const Board*, bool draw_ghost, bool show_stats_panel);
+void BoardRenderText(const Board*, bool show_stats_panel);
 
 //Input functions
 bool BoardInputDown(Board*);

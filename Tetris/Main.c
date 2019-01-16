@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "Console.h"
 #include "Game.h"
+#include "GL.h"
 #include "Globals.h"
 #include "Menu.h"
 #include "Networking.h"
@@ -12,8 +13,6 @@
 #include "Variables.h"
 #include "Window.h"
 #include <CommCtrl.h>
-#include <GL/glew.h>
-#include <GL/wglew.h>
 #include <objbase.h>
 #include <stdlib.h>
 #include <time.h>
@@ -38,7 +37,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	HGLRC glcontext = wglCreateContext(g_devcontext);
 	wglMakeCurrent(g_devcontext, glcontext);
 
-	glewInit();
+	GLInit(g_devcontext);
 	glClearColor(0.f, .2f, 0.f, 1.f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -47,7 +46,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd_str, int cmd_
 	//
 	//Other
 	//
-	SMStart(16, 100);
+	SMStart(100);
 	G_Init();
 	CreateVariables();
 	ConsoleInit();

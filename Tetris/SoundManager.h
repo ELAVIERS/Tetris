@@ -29,7 +29,7 @@ typedef struct WavePlayer_s {
 	struct WavePlayer_s *next;
 } WavePlayer;
 
-bool SMStart(uint16 bits_per_sample, uint32 buffer_duration_millis);
+bool SMStart(uint32 buffer_duration_millis);
 WaveFileNode *SMGetWav(const char *filename);
 uint32 SMPlaySound(const char *filename, bool loop);
 void SMFeedBuffer(float deltaTime);

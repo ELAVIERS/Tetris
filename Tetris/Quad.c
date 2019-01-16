@@ -1,6 +1,6 @@
 #include "Quad.h"
+#include "GL.h"
 #include "Vertex.h"
-#include <GL/glew.h>
 #include <stdlib.h>
 
 void QuadCreate(Quad *quad) {

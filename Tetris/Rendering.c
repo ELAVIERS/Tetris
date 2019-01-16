@@ -8,7 +8,7 @@
 
 #define STUPID_UV_OFFSET 0.00001f
 
-void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_transform, const Quad* quad, unsigned int level) {
+void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_transform, const Quad* quad, int level) {
 	Mat3 transform;
 
 	for (unsigned int r = 0; r < rows; ++r)
@@ -19,7 +19,11 @@ void RenderTileBuffer(const byte *buffer, byte rows, byte columns, Mat3 in_trans
 				Mat3Multiply(transform, in_transform);
 				ShaderSetUniformMat3(g_active_shader, "u_transform", transform);
 
-				short index = TextureLevelIDIndex(level, buffer[RC1D(columns, r, c)]);
+				short index;
+				if (level < 0)
+					index = TextureLevelIDIndex(0, 'g');
+				else
+					index = TextureLevelIDIndex(level, buffer[RC1D(columns, r, c)]);
 
 				if (index > -1) {
 					unsigned short divsx = (short)(1.f / quad->uv_w + 0.5f);

@@ -2,7 +2,7 @@
 #include "Types.h"
 #include <stdbool.h>
 
-byte ServerGetSlotCount();
+int ServerGetSlotCount();
 
 void StartLocalServer();
 void StartOnlineServer();

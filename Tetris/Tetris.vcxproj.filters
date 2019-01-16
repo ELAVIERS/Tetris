@@ -135,6 +135,12 @@
     <ClCompile Include="Resample.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scoring.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GL.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bitmap.h">
@@ -252,6 +258,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Resample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Scoring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

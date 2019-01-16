@@ -24,19 +24,7 @@ int PerfectSqrt(int x) {
 	return 0;
 }
 
-typedef struct {
-	unsigned int size;
-	byte *data;
-
-	byte start_row;
-	byte start_column;
-	char id;
-
-	unsigned int count;
-} BlockType;
-
 BlockType *blocktypes = NULL;
-BlockType *current_type;
 unsigned int type_count = 0;
 
 unsigned int BlockTypesGetCount() {
@@ -52,7 +40,7 @@ int GetIndexOfBlockID(byte block_id) {
 }
 
 void CreateNewBlock(int index, Block *block, unsigned short top) {
-	current_type = blocktypes + index;
+	BlockType *current_type = blocktypes + index;
 
 	unsigned int sizesq = SQUARE(current_type->size);
 	block->data = (byte*)malloc(sizesq);
@@ -68,10 +56,6 @@ void CreateNewBlock(int index, Block *block, unsigned short top) {
 
 void RenderBlockByIndex(int index, Mat3 transform, const Quad *quad, unsigned int level) {
 	RenderTileBuffer(blocktypes[index].data, blocktypes[index].size, blocktypes[index].size, transform, quad, level);
-}
-
-void CurrentBlockIncrementCount() {
-	++current_type->count;
 }
 
 void SVAddBlock(const char **tokens, unsigned int count) {
@@ -98,7 +82,6 @@ void SVAddBlock(const char **tokens, unsigned int count) {
 	blocktypes[last].start_column = atoi(tokens[3]);
 	blocktypes[last].size = size;
 	blocktypes[last].data = (byte*)malloc(sizesq);
-	blocktypes[last].count = 0;
 
 	for (int i = 0; i < sizesq; ++i)
 		blocktypes[last].data[i] = tokens[1][i] != '0' ? tokens[0][0] : 0;
@@ -122,10 +105,7 @@ void ClearBlocks() {
 	type_count = 0;
 }
 
-void ClearBlockCounts() {
-	for (unsigned int i = 0; i < type_count; ++i)
-		blocktypes[i].count = 0;
-}
+const float outline = 0.f;
 
 void RenderBlockPanel(Mat3 transform, float border_width, float border_height, unsigned int level) {
 	ShaderSetUniformFloat2(g_active_shader, "u_uvoffset", 0.f, 0.f);
@@ -135,18 +115,18 @@ void RenderBlockPanel(Mat3 transform, float border_width, float border_height, u
 	if (g_drawborder)
 		RenderPanel(transform[2][0], transform[2][1], transform[0][0], transform[1][1], border_width, border_height);
 	else
-		RenderRect(transform[2][0], transform[2][1], transform[0][0], transform[1][1]);
+		RenderRect(transform[2][0] + border_width, transform[2][1] + border_height, transform[0][0] - border_width * 2, transform[1][1] - border_height * 2);
 
 	unsigned int total_rows = 0;
 	for (unsigned int i = 0; i < type_count; ++i)
 		total_rows += blocktypes[i].size + 1;
 
-	float block_size = (transform[1][1] - border_height * 2.f - 16.f) / (float)total_rows;
+	float block_size = (transform[1][1] - border_height * 2.f - outline / 2.f) / (float)total_rows;
 
 	Mat3 block_transform;
 	Mat3Identity(block_transform);
 	Mat3Scale(block_transform, block_size, block_size);
-	Mat3Translate(block_transform, transform[2][0] + border_width + 8, transform[2][1] + border_height + 8);
+	Mat3Translate(block_transform, transform[2][0] + border_width + outline, transform[2][1] + border_height + outline);
 
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_BLOCK].glid);
 
@@ -157,7 +137,52 @@ void RenderBlockPanel(Mat3 transform, float border_width, float border_height, u
 	}
 }
 
-void RenderBlockCounts(Mat3 transform, float block_h) {
+BlockCount *CreateBlockCountList() {
+	BlockCount *result = NULL;
+	BlockCount *last = NULL;
+
+	for (unsigned int i = 0; i < type_count; ++i) {
+		BlockCount *node = (BlockCount*)malloc(sizeof(BlockCount));
+		node->count = 0;
+		node->next = NULL;
+		node->type = &blocktypes[i];
+
+		if (last)
+			last->next = node;
+		else
+			result = node;
+
+		last = node;
+	}
+
+	return result;
+}
+
+void FreeBlockCountList(BlockCount *first) {
+	BlockCount *node = first, *next;
+	
+	while (node) {
+		next = node->next;
+		free(node);
+		node = next;
+	}
+}
+
+void ClearBlockCounts(BlockCount *first) {
+	for (BlockCount *node = first; node; node = node->next)
+		node->count = 0;
+}
+
+void IncrementBlockCount(BlockCount *first, char id) {
+	for (BlockCount *node = first; node; node = node->next)
+		if (node->type->id == id)
+			++node->count;
+}
+
+void RenderBlockCounts(BlockCount *first, Mat3 transform, float block_w, float block_h) {
+	if (first == NULL)
+		return;
+
 	unsigned int total_rows = 0;
 	unsigned int min_size = ~0;
 	for (unsigned int i = 0; i < type_count; ++i) {
@@ -166,22 +191,22 @@ void RenderBlockCounts(Mat3 transform, float block_h) {
 			min_size = blocktypes[i].size;
 	}
 
-	float block_size = (transform[1][1] - block_h * 2.f - 16.f) / (float)total_rows;
+	float block_size = (transform[1][1] - block_h * 2.f - outline / 2.f) / (float)total_rows;
 
 	Mat3 char_transform;
 	Mat3Identity(char_transform);
 	Mat3Scale(char_transform, block_size * 1, block_size * 1);
-	Mat3Translate(char_transform, transform[2][0] + block_h + block_size * 4.f, transform[2][1] + block_h * 2);
+	Mat3Translate(char_transform, transform[2][0] + block_w + block_size * 3.f + 8.f, transform[2][1] + block_h);
 
 	glBindTexture(GL_TEXTURE_2D, g_textures[TEX_FONT].glid);
 
 	char valuestring[13];
 
-	for (unsigned int i = 0; i < type_count; ++i) {
-		snprintf(valuestring, 13, "%d", blocktypes[i].count);
+	for (BlockCount *node = first; node; node = node->next) {
+		snprintf(valuestring, 13, "%d", node->count);
 		RenderString(valuestring, char_transform);
 
-		Mat3Translate(char_transform, 0, block_size * (blocktypes[i].size + 1));
+		Mat3Translate(char_transform, 0, block_size * (node->type->size + 1));
 	}
 }
 
