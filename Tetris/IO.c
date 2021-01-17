@@ -70,7 +70,7 @@ unsigned int FileRead(const char *filepath, char **buffer_out) {
 }
 
 void FileWrite(const char *filepath, const char *buffer) {
-	HANDLE file = CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE file = CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (!file) return;
 
 	WriteFile(file, (LPCVOID)buffer, (DWORD)strlen(buffer), NULL, NULL);

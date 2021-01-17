@@ -106,19 +106,21 @@ void ServerReceiveMessage(const byte *message, uint16 length, byte playerid) {
 	}
 }
 
-int currentid = 0;
+int clientid = 0;
 
 inline int ClientIDToBoardID(int id) {
-	if (id < currentid)
+	if (id < clientid)
 		return id + 1;
 
-	if (id == currentid)
+	if (id == clientid)
 		return 0;
 
 	return id;
 }
 
 void ClientReceiveMessage(const byte *message, uint16 length) {
+	byte boardid = length > 1 ? ClientIDToBoardID(message[1]) : 0;
+
 	switch (message[0]) {
 	case SVMSG_COMMAND:
 		HandleCommandString(message, false);
@@ -126,7 +128,7 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 
 	case SVMSG_INFO:
 		LobbySetSize(message[1]);
-		currentid = message[2];
+		clientid = message[2];
 		break;
 	case SVMSG_NAME:
 		if (LobbyGetClientName(message[1])[0] != '\0') {
@@ -137,19 +139,19 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		}
 
 		LobbySetClientName(message[1], message + 2);
-		GameBoardSetName(ClientIDToBoardID(message[1]), message + 2);
+		GameBoardSetName(boardid, message + 2);
 		break;
 	case SVMSG_LEVEL:
 		LobbySetClientLevel(message[1], BufferToInt16(message + 2));
-		GameBoardSetLevel(ClientIDToBoardID(message[1]), BufferToInt16(message + 2));
+		GameBoardSetLevel(boardid, BufferToInt16(message + 2));
 		break;
 	case SVMSG_SCORE:
 		LobbyAddClientScore(message[1], BufferToInt32(message + 2));
-		GameBoardAddClientScore(ClientIDToBoardID(message[1]), BufferToInt32(message + 2));
+		GameBoardAddClientScore(boardid, BufferToInt32(message + 2));
 		break;
 	case SVMSG_LINESCORE:
 		LobbySetClientLineScore(message[1], BufferToInt16(message + 2));
-		GameBoardSetLineClears(ClientIDToBoardID(message[1]), BufferToInt16(message + 2));
+		GameBoardSetLineClears(boardid, BufferToInt16(message + 2));
 		break;
 	case SVMSG_TEXT:
 		switch (message[1]) {
@@ -177,35 +179,43 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 			ConsolePrint(" dipped\n");
 
 		LobbySetClientName(message[1], "");
-		GameBoardClear(ClientIDToBoardID(message[1]));
-		GameBoardSetName(ClientIDToBoardID(message[1]), "Empty");
+		GameBoardClear(boardid);
+		GameBoardSetName(boardid, "Empty");
+		GameBoardSetVisible(boardid, false);
 		break;
 
 	case SVMSG_BLOCKPOS:
-		GameBoardSetBlockPos(ClientIDToBoardID(message[1]), BufferToInt16(message + 2), BufferToInt16(message + 4));
+		GameBoardSetBlockPos(boardid, BufferToInt16(message + 2), BufferToInt16(message + 4));
+		GameBoardSetVisible(boardid, true);
 		break;
 	case SVMSG_BLOCKDATA:
-		GameBoardSetBlockData(ClientIDToBoardID(message[1]), message[2], message[3], message + 4);
+		GameBoardSetBlockData(boardid, message[2], message[3], message + 4);
+		GameBoardSetVisible(boardid, true);
 		break;
 	case SVMSG_QUEUE:
-		GameBoardSetQueue(ClientIDToBoardID(message[1]), message[2], message + 3);
+		GameBoardSetQueue(boardid, message[2], message + 3);
+		GameBoardSetVisible(boardid, true);
 		break;
 	case SVMSG_PLACE:
-		GameBoardPlaceBlock(ClientIDToBoardID(message[1]));
+		GameBoardPlaceBlock(boardid);
+		GameBoardSetVisible(boardid, true);
 		break;
 	case SVMSG_CLEAR:
-		GameBoardClear(ClientIDToBoardID(message[1]));
+		GameBoardClear(boardid);
 		LobbySetClientLevel(message[1], 0);
 		LobbySetClientScore(message[1], 0);
 		LobbySetClientLineScore(message[1], 0);
+		GameBoardSetVisible(boardid, true);
 		break;
 
 	case SVMSG_GARBAGE:
-		GameBoardAddGarbage(ClientIDToBoardID(message[1]), message[2], message[3]);
+		GameBoardAddGarbage(boardid, message[2], message[3]);
+		GameBoardSetVisible(boardid, true);
 		break;
 
 	case SVMSG_HOLD:
-		GameBoardSetHeldBlock(ClientIDToBoardID(message[1]), message[2]);
+		GameBoardSetHeldBlock(boardid, message[2]);
+		GameBoardSetVisible(boardid, true);
 		break;
 
 	case SVMSG_START:
@@ -213,11 +223,13 @@ void ClientReceiveMessage(const byte *message, uint16 length) {
 		break;
 
 	case SVMSG_STOP:
-		GameBoardFinished(ClientIDToBoardID(message[1]));
+		GameBoardFinished(boardid);
+		GameBoardSetVisible(boardid, true);
 		break;
 
 	case SVMSG_BOARD:
-		GameReceiveBoardData(ClientIDToBoardID(message[1]), message + 2, length - 2);
+		GameReceiveBoardData(boardid, message + 2, length - 2);
+		GameBoardSetVisible(boardid, true);
 		break;
 	}
 }

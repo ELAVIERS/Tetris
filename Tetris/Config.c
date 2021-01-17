@@ -75,33 +75,42 @@ void FreeCvars() {
 
 void SaveCvars() {
 	char *buffer = NULL;
-	size_t size = 1;
+	size_t maxsize = 1;
 
 	for (CVarNode *node = first; node; node = node->next) {
 		char *value = DvarAllocValueString(node->dvar);
 
 		if (value) {
-			int index = (int)size - 1;
+			int index = (int)maxsize - 1;
 
-			size += strlen(node->dvar->name) + 1 + strlen(value) + 1;
-			buffer = (char*)realloc(buffer, size);
+			maxsize += strlen(node->dvar->name) + 1 + strlen(value) + 1;
+			buffer = (char*)realloc(buffer, maxsize);
 
-			snprintf(buffer + index, size - index, "%s %s\n", node->dvar->name, value);
+			snprintf(buffer + index, maxsize - index, "%s %s\n", node->dvar->name, value);
 
 			free(value);
 		}
 	}
 
 	char *bindcfgstring;
-	unsigned int bindcfglength = BindsGetConfigString(&bindcfgstring);
-	if (bindcfglength > 1) {
-		size += bindcfglength;
-		buffer = (char*)realloc(buffer, size);
-
-		strcat_s(buffer, size, bindcfgstring);
+	unsigned int maxbindcfgsize = BindsGetConfigString(&bindcfgstring);
+	if (bindcfgstring && maxbindcfgsize > 1) {
+		maxsize += maxbindcfgsize;
+		if (buffer)
+		{
+			buffer = (char*)realloc(buffer, maxsize);
+			strcat_s(buffer, maxsize, bindcfgstring);
+		}
+		else
+		{
+			buffer = bindcfgstring;
+			bindcfgstring = NULL;
+		}
 	}
 	free(bindcfgstring);
 
 	FileWrite("config.cfg", buffer);
 	ConsolePrint("Config variables saved\n");
+
+	free(buffer);
 }

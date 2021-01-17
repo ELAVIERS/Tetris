@@ -215,17 +215,20 @@ void GameBoardSubmitBlock(int id) {
 
 			message[0] = SVMSG_GARBAGE;
 
-			for (byte i = 0; i < board_count; ++i) {
-				if (i != id) {
-					message[1] = i;
+			ScoringStats stats;
+			stats.clears = clears;
+			int garbageLines = GetGarbageForLock(&stats);
+			
+			if (garbageLines)
+			{
+				for (byte i = 0; i < board_count; ++i) {
+					if (boards[i].active && i != id) {
+						message[1] = i;
+						message[2] = garbageLines;
+						message[3] = RandomIntInRange(0, boards[0].columns);	//Clear
 
-					ScoringStats stats;
-					stats.clears = clears;
-
-					message[2] = GetGarbageForLock(&stats);			//Rows
-					message[3] = RandomIntInRange(0, boards[0].columns);	//Clear
-
-					ServerBroadcast(message, 4, -1);
+						ServerBroadcast(message, 4, -1);
+					}
 				}
 			}
 		}
@@ -251,6 +254,9 @@ void CheckLocking() {
 void GameUseNextBlock() {
 	BoardUseNextBlock(boards + 0);
 
+	SendBlockPosMessage();
+	SendBlockDataMessage();
+
 	if (BoardCheckMove(boards + 0, 0, 0) == false)
 	{
 		byte message = SVMSG_STOP;
@@ -258,9 +264,6 @@ void GameUseNextBlock() {
 		GameBoardFinished(0);
 	}
 	else {
-		SendBlockPosMessage();
-		SendBlockDataMessage();
-
 		CheckLocking();
 		can_use_held = true;
 		drop_timer = 0;
@@ -300,7 +303,7 @@ void MoveDown() {
 		GamePlaceBlock();
 }
 
-void Moveside(int dir) {
+void MoveSide(int dir) {
 	if (BoardInputX(boards + 0, (int)*axis_x)) {
 		SMPlaySound(g_audio.move, false);
 
@@ -371,7 +374,7 @@ void GameFrame() {
 			if (!g_in_menu) {
 				if (*axis_x != axis_x_prev) {
 					axis_x_prev = *axis_x;
-					Moveside((int)*axis_x);
+					MoveSide((int)*axis_x);
 
 					if (axis_x)
 						das_timer = -*sv_autorepeat_delay;
@@ -381,7 +384,7 @@ void GameFrame() {
 					das_timer += g_delta;
 					if (das_timer >= *sv_autorepeat) {
 						das_timer -= *sv_autorepeat;
-						Moveside((int)axis_x_prev);
+						MoveSide((int)axis_x_prev);
 					}
 				}
 			}
@@ -427,16 +430,16 @@ void GameRender() {
 		ShaderSetUniformMat3(shader, "u_projection", g_projection);
 
 		for (unsigned int i = 0; i < board_count; ++i)
-			BoardRender(boards + i, *sv_ghost, show_stats_panel);
+			if (boards[i].visible)
+				BoardRender(boards + i, *sv_ghost, show_stats_panel);
 	}
 
 	UseGLProgram(textshader);
 	ShaderSetUniformMat3(textshader, "u_projection", g_projection);
 
-	if (board_count) {
-		for (unsigned int i = 0; i < board_count; ++i)
+	for (unsigned int i = 0; i < board_count; ++i)
+		if (boards[i].visible)
 			BoardRenderText(boards + i, show_stats_panel);
-	}
 
 	ShaderSetUniformBool(textshader, "u_masked", !g_in_game);
 	Menus_Render();
@@ -502,14 +505,14 @@ void GameBegin(int playercount) {
 		boards[i].stats_rows = render_rows + 2;
 		boards[i].stats_columns = 6;
 		boards[i].held_index = 0xFF;
-		boards[i].active = false;
+		boards[i].active = boards[i].visible = false;
 
 		BoardCreate(boards + i);
 		BoardClear(boards + i);
 		BoardSetIDSize(boards + i, blockid_size);
 	}
 
-	boards[0].active = true;
+	boards[0].active = boards[0].visible = true;
 	boards[0].bag_size = (byte)*sv_bag_size;
 	BoardReallocNextQueue(boards + 0, (byte)*sv_queue_size, (byte)BlockTypesGetCount());
 	GameUseNextBlock();
@@ -559,6 +562,15 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 	if (board_count == 0)
 		return;
 
+	int visible_board_count = 0;
+
+	for (unsigned int i = 0; i < board_count; ++i)
+		if (boards[i].visible)
+			++visible_board_count;
+
+	if (visible_board_count == 0)
+		return;
+
 	if (w == 0) {
 		RECT rect;
 		GetClientRect(g_hwnd, &rect);
@@ -569,7 +581,7 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 	bool show_stats_panel = false;
 	if (*cl_stats_mode) {
 		if (*cl_stats_mode == 1)
-			show_stats_panel = board_count == 1;
+			show_stats_panel = LobbyGetSize() <= 1;
 		else
 			show_stats_panel = true;
 	}
@@ -595,8 +607,8 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 	float cell_w;
 	float cell_h;
 
-	if (aspect * board_count > (float)w / (float)h) {
-		cell_w = (float)w / (float)board_count;
+	if (aspect * visible_board_count > (float)w / (float)h) {
+		cell_w = (float)w / (float)visible_board_count;
 		cell_h = cell_w / aspect;
 
 		first_board_y = h / 2.f - cell_h / 2.f;
@@ -605,9 +617,9 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 		cell_h = (float)h;
 		cell_w = cell_h * aspect;
 
-		gap = ((float)w - cell_w * (float)board_count) / ((float)board_count - 1.f);
+		gap = ((float)w - cell_w * (float)visible_board_count) / ((float)visible_board_count - 1.f);
 
-		if (board_count == 1)
+		if (visible_board_count == 1)
 			first_board_x = w / 2.f - cell_w / 2.f;
 	}
 
@@ -618,16 +630,19 @@ void GameSizeUpdate(unsigned short w, unsigned short h) {
 	float current_cell_y = first_board_y;
 
 	for (unsigned int i = 0; i < board_count; ++i) {
-		boards[i].x = current_cell_x + tile_w * extra_left_columns;
-		boards[i].y = current_cell_y + tile_h * extra_bottom_rows;
-		boards[i].width = tile_w * board_columns;
-		boards[i].height = tile_h * board_rows;
-		
-		boards[i].nametag->size = tile_h;
-		ConstrainBoardNameTag(boards + i, tile_w * board_inner_columns);
-		GenerateTextData(boards[i].nametag, Font_UVSize(&g_font));
+		if (boards[i].visible)
+		{
+			boards[i].x = current_cell_x + tile_w * extra_left_columns;
+			boards[i].y = current_cell_y + tile_h * extra_bottom_rows;
+			boards[i].width = tile_w * board_columns;
+			boards[i].height = tile_h * board_rows;
 
-		current_cell_x += cell_w + gap;
+			boards[i].nametag->size = tile_h;
+			ConstrainBoardNameTag(boards + i, tile_w * board_inner_columns);
+			GenerateTextData(boards[i].nametag, Font_UVSize(&g_font));
+
+			current_cell_x += cell_w + gap;
+		}
 	}
 
 	float u = (float)w / (float)g_textures[TEX_BG].width * 8.f / tile_w;
@@ -779,6 +794,17 @@ void GameBoardSetHeldBlock(int id, byte blockid) {
 	boards[id].held_index = blockid;
 }
 
+void GameBoardSetVisible(int id, bool visible) {
+	if (board_count == 0) return;
+
+	if (boards[id].visible != visible)
+	{
+		boards[id].visible = visible;
+
+		GameSizeUpdate(0, 0);
+	}
+}
+
 void GameBoardPlaceBlock(int id) {
 	if (board_count == 0) return;
 
@@ -869,7 +895,7 @@ void GameSendAllBoardData(int playerid) {
 	byte *message = (byte*)malloc(message_length);
 
 	for (unsigned int i = 0; i < board_count; ++i) {
-		if (i != playerid) {
+		if (boards[i].visible && i != playerid) {
 			message[1] = (byte)i;
 
 			message[0] = SVMSG_BOARD;

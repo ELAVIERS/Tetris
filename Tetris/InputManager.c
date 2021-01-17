@@ -227,7 +227,7 @@ void KeyUp(WORD vk) {
 
 unsigned int BindsGetConfigString(char **out_string) {
 	char *string = DupString("");
-	size_t stringlen = 1;
+	size_t maxsize = 1;
 
 	for (KeyBind *bind = binds; bind; bind = bind->next) {
 		const char *keyname = StringFromVKCode(bind->key);
@@ -235,29 +235,33 @@ unsigned int BindsGetConfigString(char **out_string) {
 
 		if (bind->data.type == BIND_AXIS) {
 			size_t length = strlen("bindaxis   \n") + strlen(keyname) + strlen(bind->dvar->name) + 10;		//Bindaxis + spaces + newline + keyname + dvar name + float leeway + '\0'
-			stringlen += length;
-			string = (char*)realloc(string, stringlen);
+			maxsize += length;
+			string = (char*)realloc(string, maxsize);
 
-			snprintf(string + index, length,"bindaxis %s %s %f\n", keyname, bind->dvar->name, bind->data.axisvalue);
+			snprintf(string + index, maxsize,"bindaxis %s %s %3.6f\n", keyname, bind->dvar->name, bind->data.axisvalue);
 		}
 		else if (bind->data.type == BIND_COMMAND) {
 			size_t length = strlen("bind  \n") + strlen(keyname) + strlen(bind->dvar->name) + 1;			//Bind + spaces + newline + keyname + dvar name + '\0'
-			stringlen += length;
-			string = (char*)realloc(string, stringlen);
+			maxsize += length;
+			string = (char*)realloc(string, maxsize);
 
-			snprintf(string + index, length, "bind %s %s\n", keyname, bind->dvar->name);
+			snprintf(string + index, maxsize, "bind %s %s", keyname, bind->dvar->name);
 
+			index = strlen(string);
 			for (unsigned int i = 0; i < bind->data.args.count; ++i) {
-				index = stringlen - 1;
 				length = strlen(bind->data.args.tokens[i]) + 1;
-				stringlen += length;
-				string = (char*)realloc(string, stringlen);
+				maxsize += length;
+				string = (char*)realloc(string, maxsize);
 
-				snprintf(string + index, length, " %s", bind->data.args.tokens[i]);
+				snprintf(string + index, maxsize, " %s", bind->data.args.tokens[i]);
+				index += length;
 			}
+
+			//the newline space has been accounted for, no alloc stuff needed
+			snprintf(string + index, maxsize, "\n");
 		}
 	}
 
 	*out_string = string;
-	return (unsigned int)stringlen;
+	return (unsigned int)maxsize;
 }

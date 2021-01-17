@@ -1,5 +1,6 @@
 #pragma once
 #include "Types.h"
+#include <stdbool.h>
 
 void GameInit();
 void GameFrame();
@@ -25,6 +26,7 @@ void GameBoardSetBlockData(int id, char tile_id, int size, const byte *data);
 void GameBoardSetBlockPos(int id, signed short x, signed short y);
 void GameBoardSetQueue(int id, byte length, const byte *queue);
 void GameBoardSetHeldBlock(int id, byte blockid);
+void GameBoardSetVisible(int id, bool visible);
 void GameBoardPlaceBlock(int id);
 void GameBoardClear(int id);
 void GameBoardFinished(int id);

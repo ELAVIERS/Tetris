@@ -18,7 +18,7 @@ HWND hwnd_setting_name;
 HWND hwnd_setting_volume;
 HWND hwnd_setting_volume_music;
 
-char ** poo(const char *search, const char *dir, HWND hwnd, unsigned int *out_count) {
+char ** GetConfigFilepaths(const char *search, const char *dir, const char* currentcfg, HWND hwnd, unsigned int *out_count) {
 	char **names = NULL;
 	unsigned int count = 0;
 
@@ -28,6 +28,7 @@ char ** poo(const char *search, const char *dir, HWND hwnd, unsigned int *out_co
 	if (dircount == 0)
 		return NULL;
 
+	//I don't want these because they are always ".." and "." ... not very useful directories, basically!
 	free(dirs[0]);
 	free(dirs[1]);
 
@@ -47,11 +48,27 @@ char ** poo(const char *search, const char *dir, HWND hwnd, unsigned int *out_co
 		for (unsigned int j = 0; j < filecount; ++j) {
 			path[end] = '\0';
 			strcat_s(path, MAX_PATH, filenames[j]);
-			names[count++] = DupString(path);
-
+			
 			CutExt(filenames[j]);
-			SendMessage(hwnd, CB_ADDSTRING, 0, (LPARAM)filenames[j]);
+			SendMessage(hwnd, CB_ADDSTRING, NULL, (LPARAM)filenames[j]);
 
+			//todo: this needn't be here, stricmp is a thing
+			bool match = true;
+			for (const char* a = path, const *b = currentcfg; ; ++a, ++b)
+			{
+				if (tolower(*a) != tolower(*b))
+				{
+					match = false;
+					break;
+				}
+
+				if (*a == '\0') break;
+			}
+
+			if (match) 
+				SendMessage(hwnd, CB_SETCURSEL, count, NULL);
+
+			names[count++] = DupString(path);
 			free(filenames[j]);
 		}
 
@@ -70,8 +87,8 @@ unsigned int texture_config_count = 0;
 unsigned int audio_config_count = 0;
 
 inline void AddComboBoxEntries() {
-	texture_config_filepaths = poo("textures/*", "textures/", hwnd_setting_texture_cfg, &texture_config_count);
-	audio_config_filepaths = poo("audio/*", "audio/", hwnd_setting_audio_cfg, &audio_config_count);
+	texture_config_filepaths = GetConfigFilepaths("textures/*", "textures/", GetDvar("cfg_texture")->value.string, hwnd_setting_texture_cfg, &texture_config_count);
+	audio_config_filepaths = GetConfigFilepaths("audio/*", "audio/", GetDvar("cfg_audio")->value.string, hwnd_setting_audio_cfg, &audio_config_count);
 }
 
 void SettingsFree() {

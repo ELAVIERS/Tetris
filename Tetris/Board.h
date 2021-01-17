@@ -31,7 +31,10 @@ typedef struct Garbage_s {
 	block			the current block
 */
 typedef struct Board_s {
+	//true when this board is in play (actively receiving inputs and updating)
 	bool active;
+
+	bool visible;
 
 	float x, y;
 	float width, height;
